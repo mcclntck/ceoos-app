@@ -69,3 +69,40 @@ input[type='range']::-webkit-slider-thumb {
   width: 0;
   height: 0;
 }
+
+/* ---- Orbit hub (ceoos-orbit.jsx port) ----
+   The prototype animates each department wrapper's `left`/`top` (900ms) and its bubble's
+   `width`/`height` (720ms) + `box-shadow` (500ms) directly — layout/paint-triggering CSS
+   properties diagnosed as the root cause of jank in a prior app attempt with this same
+   visual design. This app reimplements the identical visual result using a single static
+   `transform` rule driven by `--bx`/`--by`/`--bscale` custom properties (see OrbitBubble.tsx)
+   so the browser only ever animates `transform`, which is compositor-only.
+   The transition is gated on `data-mounted="true"` (set synchronously via useOrbitMount,
+   before paint) so the FIRST paint renders every bubble at its final position/scale
+   instantly — no transition plays, no flicker, no reveal race. Only subsequent level
+   changes animate. */
+.orbit-bubble-wrap {
+  transform: translate(-50%, -50%) translate(var(--bx), var(--by)) scale(var(--bscale));
+}
+.orbit-bubble-wrap[data-mounted='true'] {
+  transition: transform 900ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Idle motion — ONLY the "You" hub halo breathes. The department orbs never idle-float
+   (the source explicitly cut an earlier floating-orb treatment for being "too busy").
+   Ported verbatim from ceoos-orbit.jsx's ORBIT_DRIFT_CSS. */
+@keyframes ceoos-halo {
+  0%, 100% {
+    opacity: 0.45;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  50% {
+    opacity: 0.7;
+    transform: translate(-50%, -50%) scale(1.04);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ceoos-halo {
+    animation: none !important;
+  }
+}

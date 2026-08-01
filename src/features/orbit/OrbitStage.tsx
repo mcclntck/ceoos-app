@@ -13,8 +13,7 @@
 import { useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { useDepartments } from '@/state/departmentsStore'
-import { useIdentity } from '@/state/identityStore'
-import { AppBackdrop, StatusBar, BrandRow, Avatar } from '@/features/chrome'
+import { AppBackdrop, StatusBar, BrandRow, AccountControls } from '@/features/chrome'
 import type { DeptId } from '@/departments/types'
 import { CX, CY, ORBIT_H, ORBIT_LEVELS, ORBIT_W, orbitPosition } from './orbitGeometry'
 import { ORBIT_PRESENCE, useOrbitScale } from './useOrbitScale'
@@ -84,7 +83,6 @@ export interface OrbitStageProps {
 
 export function OrbitStage({ onOpenDepartment }: OrbitStageProps) {
   const { departments } = useDepartments()
-  const { identity } = useIdentity()
   const [noteOpen, setNoteOpen] = useState(false)
   const [notes, setNotes] = useState<OrbitNote[]>([])
   const wrapRef = useRef<HTMLDivElement>(null)
@@ -117,7 +115,7 @@ export function OrbitStage({ onOpenDepartment }: OrbitStageProps) {
             My Departments
           </span>
         }
-        right={<Avatar initials={identity?.initials ?? 'SJ'} />}
+        right={<AccountControls />}
       />
 
       <div

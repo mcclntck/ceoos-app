@@ -3,6 +3,7 @@ import { render, screen } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { IdentityProvider } from '@/state/identityStore'
 import { DepartmentsProvider } from '@/state/departmentsStore'
+import { UiProvider } from '@/state/uiStore'
 import { OrbitStage } from '@/features/orbit/OrbitStage'
 import { OrbitBubble } from '@/features/orbit/OrbitBubble'
 import { CX, CY } from '@/features/orbit/orbitGeometry'
@@ -15,7 +16,9 @@ beforeEach(() => {
 function Providers({ children }: { children: ReactNode }) {
   return (
     <IdentityProvider>
-      <DepartmentsProvider>{children}</DepartmentsProvider>
+      <DepartmentsProvider>
+        <UiProvider>{children}</UiProvider>
+      </DepartmentsProvider>
     </IdentityProvider>
   )
 }

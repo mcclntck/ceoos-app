@@ -28,7 +28,7 @@ export function AccountControls() {
         onClose={() => setResetConfirmOpen(false)}
         onConfirm={() => {
           resetAccount()
-          window.location.assign('/onboarding')
+          window.location.assign('/')
         }}
       />
     </>

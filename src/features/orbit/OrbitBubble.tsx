@@ -37,7 +37,7 @@
    inside this component, not as a parent-created closure) — the structural fix from the
    jank diagnosis. */
 import { memo } from 'react'
-import { ORBIT_LEVELS, YOU_SIZE as _YOU_SIZE, orbitStroke } from './orbitGeometry'
+import { CX, CY, ORBIT_LEVELS, YOU_SIZE as _YOU_SIZE, orbitStroke } from './orbitGeometry'
 import { ORBIT_TONE, ORBIT_ICONS, ORBIT_HUE } from '@/departments/departmentTones'
 import type { DeptId, Glow } from '@/departments/types'
 
@@ -76,8 +76,8 @@ function OrbitBubbleImpl({ id, label, glow, level, bx, by, mounted, onOpen }: Or
       style={
         {
           position: 'absolute',
-          left: 0,
-          top: 0,
+          left: CX,
+          top: CY,
           '--bx': `${bx}px`,
           '--by': `${by}px`,
           '--bscale': bscale,

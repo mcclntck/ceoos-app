@@ -5,6 +5,7 @@ import { IdentityProvider } from '@/state/identityStore'
 import { DepartmentsProvider } from '@/state/departmentsStore'
 import { OrbitStage } from '@/features/orbit/OrbitStage'
 import { OrbitBubble } from '@/features/orbit/OrbitBubble'
+import { CX, CY } from '@/features/orbit/orbitGeometry'
 import { CEOOS_DEPARTMENTS } from '@/departments/departments.config'
 
 beforeEach(() => {
@@ -58,6 +59,22 @@ describe('OrbitStage', () => {
     const youButton = screen.getByText('You')
     youButton.dispatchEvent(new MouseEvent('click', { bubbles: true }))
     expect(screen.getByText('Note to self')).toBeTruthy()
+  })
+})
+
+describe('OrbitBubble positioning', () => {
+  it('anchors each bubble wrapper at CX/CY, not the container origin (regression: bubbles must not collapse toward 0,0)', () => {
+    render(
+      <Providers>
+        <OrbitStage onOpenDepartment={vi.fn()} />
+      </Providers>,
+    )
+    for (const dept of CEOOS_DEPARTMENTS) {
+      const button = screen.getByLabelText(dept.label)
+      const wrapper = button.parentElement as HTMLElement
+      expect(wrapper.style.left).toBe(`${CX}px`)
+      expect(wrapper.style.top).toBe(`${CY}px`)
+    }
   })
 })
 

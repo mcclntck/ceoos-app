@@ -83,7 +83,16 @@ export function CeoTabBar({ active, onChange }: CeoTabBarProps) {
           >
             <TabGlyph name={t.icon} color={color} />
             <span>{t.label}</span>
-            <span style={{ width: on ? 16 : 0, height: 2, borderRadius: 2, background: 'var(--accent)', transition: 'width var(--dur-fast)' }} />
+            <span
+              style={{
+                width: 16,
+                height: 2,
+                borderRadius: 2,
+                background: 'var(--accent)',
+                transform: on ? 'scaleX(1)' : 'scaleX(0)',
+                transition: 'transform var(--dur-fast)',
+              }}
+            />
           </button>
         )
       })}

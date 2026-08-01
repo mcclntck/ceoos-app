@@ -1,33 +1,33 @@
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { AppProviders } from '@/state/AppProviders'
+import { LoginRoute } from '@/routes/LoginRoute'
+import { OnboardingRoute } from '@/routes/OnboardingRoute'
+import { RootLayout } from '@/routes/RootLayout'
+import { TabsLayout } from '@/routes/TabsLayout'
+import { DepartmentsRoute } from '@/routes/DepartmentsRoute'
+import { DepartmentHomeRoute } from '@/routes/DepartmentHomeRoute'
+import { PlaceholderScreen } from '@/routes/PlaceholderScreen'
 
 function App() {
   return (
     <AppProviders>
-      <div
-        style={{
-          minHeight: '100dvh',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          color: 'var(--text-primary)',
-          fontFamily: 'var(--font-primary)',
-        }}
-      >
-        <div style={{ textAlign: 'center' }}>
-          <div
-            style={{
-              fontSize: 13,
-              fontWeight: 600,
-              letterSpacing: 'var(--ls-wordmark)',
-              color: 'var(--zinc)',
-              paddingLeft: 'var(--ls-wordmark)',
-            }}
-          >
-            CEO OF SELF
-          </div>
-          <div style={{ marginTop: 12, color: 'var(--accent)' }}>state layer OK</div>
-        </div>
-      </div>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/login" element={<LoginRoute />} />
+          <Route path="/onboarding" element={<OnboardingRoute />} />
+          <Route element={<RootLayout />}>
+            <Route element={<TabsLayout />}>
+              <Route path="/departments" element={<DepartmentsRoute />} />
+              <Route path="/actions" element={<PlaceholderScreen title="My Actions" />} />
+              <Route path="/mood" element={<PlaceholderScreen title="Mood" />} />
+            </Route>
+            <Route path="/departments/:deptId" element={<DepartmentHomeRoute />} />
+            <Route path="/departments/:deptId/flow" element={<PlaceholderScreen title="Guided conversation" />} />
+            <Route path="/" element={<Navigate to="/departments" replace />} />
+          </Route>
+          <Route path="*" element={<Navigate to="/login" replace />} />
+        </Routes>
+      </BrowserRouter>
     </AppProviders>
   )
 }

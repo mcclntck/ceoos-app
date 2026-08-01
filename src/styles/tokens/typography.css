@@ -1,0 +1,35 @@
+/* CEO of Self — Typography tokens
+   Primary: Filson Pro → Montserrat (sanctioned digital substitute).
+   Weight map: Light 300 · Book 400 · Regular 500 · Medium 600 · Bold 700 · Black 900. */
+:root {
+  --font-primary: 'Montserrat', 'Filson Pro', 'Gotham', system-ui, -apple-system, sans-serif;
+  --font-feature: 'Caveat', 'Bitcheese', cursive; /* substitute — flag in readme */
+  --font-mono: ui-monospace, 'SF Mono', monospace;
+
+  --fw-light: 300;   /* @kind other */
+  --fw-book: 400;    /* @kind other */
+  --fw-regular: 500; /* @kind other */
+  --fw-medium: 600;  /* @kind other */
+  --fw-bold: 700;    /* @kind other */
+  --fw-black: 900;   /* @kind other */
+
+  /* Type scale (mobile-first, matches app screens) */
+  --fs-display: 44px;   /* CEO Moment questions */
+  --fs-h1: 32px;        /* screen titles: "Your CEO journal" */
+  --fs-h2: 24px;
+  --fs-h3: 20px;
+  --fs-body-lg: 18px;
+  --fs-body: 16px;
+  --fs-sm: 14px;
+  --fs-xs: 12px;
+  --fs-eyebrow: 11px;   /* "YOUR REFLECTION" labels */
+
+  --lh-tight: 1.08;  /* @kind other */
+  --lh-snug: 1.25;   /* @kind other */
+  --lh-body: 1.5;    /* @kind other */
+
+  --ls-eyebrow: 0.18em;  /* @kind other */
+  --ls-wordmark: 0.34em; /* @kind other */
+  --ls-tight: -0.01em;   /* @kind other */
+  --ls-normal: 0;        /* @kind other */
+}

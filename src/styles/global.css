@@ -1,0 +1,71 @@
+/* CEOOS — global shell + responsive contract.
+   Ported verbatim from design/CEOOS Pilot.html's inline <style> block. */
+:root {
+  --ceoos-col: 100%;
+  --ceoos-gutter: 20px;
+  --ceoos-gutter-sm: 16px;
+  --ceoos-dock: 96px;
+  --ceoos-title: 29px;
+  --ceoos-body: 15px;
+  --ceoos-top: max(12px, env(safe-area-inset-top));
+}
+@media (min-width: 600px) {
+  :root {
+    --ceoos-col: 600px;
+    --ceoos-gutter: 34px;
+    --ceoos-gutter-sm: 26px;
+    --ceoos-dock: 104px;
+    --ceoos-title: 34px;
+    --ceoos-body: 16.5px;
+  }
+}
+@media (min-width: 900px) {
+  :root {
+    --ceoos-col: 680px;
+    --ceoos-gutter: 44px;
+    --ceoos-gutter-sm: 34px;
+    --ceoos-title: 38px;
+    --ceoos-body: 17px;
+  }
+}
+
+html, body {
+  margin: 0;
+  background: #000;
+  -webkit-text-size-adjust: 100%;
+}
+#root {
+  min-height: 100dvh;
+}
+a {
+  color: var(--accent);
+}
+a:hover {
+  color: var(--accent-strong);
+}
+button:focus-visible,
+[role='button']:focus-visible,
+input:focus-visible,
+textarea:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(202, 219, 43, 0.55);
+}
+@media (hover: hover) {
+  button:hover {
+    filter: brightness(1.06);
+  }
+}
+input[type='range'] {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+}
+input[type='range']::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 28px;
+  height: 28px;
+}
+::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}

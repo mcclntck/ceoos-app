@@ -1,0 +1,27 @@
+/* CEO of Self — Radius, shadow, blur, motion tokens.
+   The app leans on soft glass cards, large pill CTAs and topographic imagery. */
+:root {
+  /* Corner radii */
+  --radius-xs: 8px;
+  --radius-sm: 12px;
+  --radius-md: 20px;    /* cards */
+  --radius-lg: 28px;    /* large glass panels */
+  --radius-pill: 999px; /* CTAs, chips, badges */
+
+  /* Shadows (subtle — depth comes from glass + blur, not heavy drop shadows) */
+  --shadow-card: 0 1px 0 rgba(255,255,255,0.04) inset, 0 8px 30px rgba(0,0,0,0.45);
+  --shadow-pop: 0 12px 40px rgba(0,0,0,0.55);
+  --shadow-accent: 0 6px 24px rgba(202, 219, 43, 0.28);
+  --glow-accent: 0 0 0 1px rgba(202,219,43,0.5), 0 0 24px rgba(202,219,43,0.35);
+
+  /* Glass blur */
+  --blur-card: 18px;
+  --blur-chrome: 24px;
+
+  /* Motion */
+  --ease-standard: cubic-bezier(0.22, 0.61, 0.36, 1);  /* @kind other */
+  --ease-emphasis: cubic-bezier(0.16, 1, 0.3, 1);       /* @kind other */
+  --dur-fast: 140ms;  /* @kind other */
+  --dur-med: 240ms;   /* @kind other */
+  --dur-slow: 420ms;  /* @kind other */
+}

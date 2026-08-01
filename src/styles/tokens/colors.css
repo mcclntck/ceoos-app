@@ -1,0 +1,52 @@
+/* CEO of Self — Colour tokens
+   Brand palette per CEOOS Brand Guidelines 2026 (§3 Colour).
+   Hierarchy: Coal (most important) → Neon Green (feature/contrast). */
+:root {
+  /* ---- Brand palette (canonical) ---- */
+  --coal: #3a3a3a;        /* Hero colour — darkest */
+  --steel: #7d7e79;       /* mid neutral */
+  --zinc: #adaeb1;        /* predominant text neutral */
+  --titanium: #e9eaed;    /* lightest neutral / background washes */
+  --neon-green: #cadb2b;  /* Feature colour — importance & contrast */
+
+  /* ---- Neon green tints (guideline scale) ---- */
+  --neon-90: #d0df40;
+  --neon-70: #dbe870;
+  --neon-50: #e4ef95;
+  --neon-30: #eef4bf;
+  --neon-10: #f7fae4;
+
+  /* ---- Digital surface extension (app runs darker than Coal) ---- */
+  --black: #000000;
+  --ink-900: #0a0a0a;
+  --ink-800: #121212;
+  --ink-700: #1a1a1a;
+  --ink-600: #232323;
+
+  /* ---- Semantic aliases ---- */
+  --bg-app: var(--black);
+  --bg-elevated: var(--ink-800);
+  --surface-card: rgba(255, 255, 255, 0.045);
+  --surface-card-strong: rgba(255, 255, 255, 0.07);
+  --surface-glass: rgba(20, 20, 20, 0.55);
+
+  --text-primary: var(--titanium);
+  --text-secondary: var(--zinc);
+  --text-muted: var(--steel);
+  --text-on-accent: #1c1e00;
+  --text-on-light: var(--coal);
+
+  --accent: var(--neon-green);
+  --accent-strong: #d3e21f;
+  --accent-dim: rgba(202, 219, 43, 0.16);
+
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.16);
+  --border-accent: var(--neon-green);
+
+  --focus-ring: rgba(202, 219, 43, 0.55);
+
+  /* Light-mode surfaces (print / marketing) */
+  --surface-light: var(--titanium);
+  --surface-light-card: #ffffff;
+}

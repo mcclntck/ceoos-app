@@ -1,0 +1,7 @@
+/* CEO of Self — Design System entry point.
+   Ported verbatim from design/_ds/ceo-of-self-design-system-.../styles.css */
+@import url('./fonts.css');
+@import url('./colors.css');
+@import url('./typography.css');
+@import url('./spacing.css');
+@import url('./effects.css');

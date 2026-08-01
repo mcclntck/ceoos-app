@@ -33,9 +33,13 @@ html, body {
   margin: 0;
   background: #000;
   -webkit-text-size-adjust: 100%;
+  height: 100%;
+  overflow: hidden;
 }
 #root {
-  min-height: 100dvh;
+  position: relative;
+  height: 100dvh;
+  overflow: hidden;
 }
 a {
   color: var(--accent);

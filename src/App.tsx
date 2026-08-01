@@ -6,7 +6,9 @@ import { RootLayout } from '@/routes/RootLayout'
 import { TabsLayout } from '@/routes/TabsLayout'
 import { DepartmentsRoute } from '@/routes/DepartmentsRoute'
 import { DepartmentHomeRoute } from '@/routes/DepartmentHomeRoute'
-import { PlaceholderScreen } from '@/routes/PlaceholderScreen'
+import { DepartmentFlowRoute } from '@/routes/DepartmentFlowRoute'
+import { ActionsRoute } from '@/routes/ActionsRoute'
+import { MoodRoute } from '@/routes/MoodRoute'
 
 function App() {
   return (
@@ -18,11 +20,11 @@ function App() {
           <Route element={<RootLayout />}>
             <Route element={<TabsLayout />}>
               <Route path="/departments" element={<DepartmentsRoute />} />
-              <Route path="/actions" element={<PlaceholderScreen title="My Actions" />} />
-              <Route path="/mood" element={<PlaceholderScreen title="Mood" />} />
+              <Route path="/actions" element={<ActionsRoute />} />
+              <Route path="/mood" element={<MoodRoute />} />
             </Route>
             <Route path="/departments/:deptId" element={<DepartmentHomeRoute />} />
-            <Route path="/departments/:deptId/flow" element={<PlaceholderScreen title="Guided conversation" />} />
+            <Route path="/departments/:deptId/flow" element={<DepartmentFlowRoute />} />
             <Route path="/" element={<Navigate to="/departments" replace />} />
           </Route>
           <Route path="*" element={<Navigate to="/login" replace />} />

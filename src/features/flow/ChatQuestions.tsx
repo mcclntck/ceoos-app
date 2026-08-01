@@ -16,6 +16,8 @@ import { CoachRow, UserRow, SayContent, TypingDots, CHAT_BUBBLE_KEYFRAMES } from
 import type { ChatTurn } from './ChatBubbles'
 import { ChatInput } from './ChatInput'
 import type { ChatDraft } from './ChatInput'
+import { fetchCoachAcknowledgement } from './chatAcknowledgement'
+import type { AcknowledgementTurn } from './chatAcknowledgement'
 
 /** The prototype's hardcoded "coach is typing" pause before the next question appears. */
 export const TYPING_DELAY_MS = 650
@@ -73,6 +75,9 @@ export function ChatQuestions({ dept, answers, setAnswer, onBack, onDone }: Chat
   const [typing, setTyping] = useState(true)
   const [draft, setDraft] = useState<ChatDraft>({ picks: [], text: '' })
   const scRef = useRef<HTMLDivElement | null>(null)
+  /* LLM-generated acknowledgements, keyed by the turn index they follow.
+     Populated after the real network call resolves — see send() below. */
+  const [acknowledgements, setAcknowledgements] = useState<Record<number, string>>({})
 
   useEffect(() => {
     setTyping(true)
@@ -87,20 +92,32 @@ export function ChatQuestions({ dept, answers, setAnswer, onBack, onDone }: Chat
   useEffect(() => {
     const el = scRef.current
     if (el) el.scrollTop = el.scrollHeight
-  }, [activeIdx, typing, answers])
+  }, [activeIdx, typing, answers, acknowledgements])
 
   const canSend = draft.picks.length > 0 || draft.text.trim().length > 0
   const send = () => {
     if (!canSend || activeIdx == null) return
-    // TODO(llm-ack): a parallel task will insert an async acknowledgement call
-    // here before advancing to the next question — this is the exact seam:
-    // the user's answer is recorded first, then `activeIdx` advances (via the
-    // `visible`/`answered` scan above re-running on the next render) to reveal
-    // the next fixed question. A later task should await an acknowledgement
-    // response and insert it as an extra CoachRow between this answer and the
-    // next question's reveal, reusing the `typing`/TypingDots state above for
-    // pacing instead of the hardcoded TYPING_DELAY_MS.
-    setAnswer(activeIdx, { picks: draft.picks, text: draft.text.trim() })
+    const answeredIdx = activeIdx
+    const question = turns[answeredIdx].type === 'ask' ? turns[answeredIdx].q : ''
+    const userAnswer = answerText({ picks: draft.picks, text: draft.text.trim() })
+    setAnswer(answeredIdx, { picks: draft.picks, text: draft.text.trim() })
+
+    const priorTurns: AcknowledgementTurn[] = visible
+      .filter((i) => i < answeredIdx)
+      .flatMap((i): AcknowledgementTurn[] => {
+        const t = turns[i]
+        const say: AcknowledgementTurn[] = [{ role: 'assistant', content: t.type === 'say' ? t.text ?? '' : t.q }]
+        if (t.type === 'ask' && answered(i)) {
+          say.push({ role: 'user', content: answerText(answers[i]) })
+          const ack = acknowledgements[i]
+          if (ack) say.push({ role: 'assistant', content: ack })
+        }
+        return say
+      })
+
+    void fetchCoachAcknowledgement(dept.id, question, userAnswer, priorTurns).then((text) => {
+      if (text) setAcknowledgements((prev) => ({ ...prev, [answeredIdx]: text }))
+    })
   }
 
   return (
@@ -135,6 +152,7 @@ export function ChatQuestions({ dept, answers, setAnswer, onBack, onDone }: Chat
             <div key={i}>
               <CoachRow>{t.type === 'say' ? <SayContent t={t} /> : t.q}</CoachRow>
               {t.type === 'ask' && answered(i) && <UserRow>{answerText(answers[i])}</UserRow>}
+              {t.type === 'ask' && answered(i) && acknowledgements[i] && <CoachRow>{acknowledgements[i]}</CoachRow>}
             </div>
           )
         })}

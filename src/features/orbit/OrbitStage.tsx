@@ -153,7 +153,7 @@ export function OrbitStage({ onOpenDepartment }: OrbitStageProps) {
           <div style={{ width: ORBIT_W * k, height: ORBIT_H * k, flexShrink: 0, position: 'relative' }}>
             <div style={{ position: 'absolute', top: 0, left: 0, width: ORBIT_W, height: ORBIT_H, transform: `scale(${k})`, transformOrigin: 'top left' }}>
               <div style={{ position: 'relative', width: ORBIT_W, height: ORBIT_H, flexShrink: 0 }}>
-                <OrbitLinks departments={departments.map((d) => ({ id: d.id, angle: d.angle, level: d.level }))} />
+                <OrbitLinks />
                 <YouHub onClick={() => setNoteOpen(true)} sizeMul={presence.hub} halo={presence.halo} />
                 {departments.map((d) => {
                   const geo = ORBIT_LEVELS[d.level]

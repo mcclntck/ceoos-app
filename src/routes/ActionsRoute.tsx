@@ -8,7 +8,7 @@ export function ActionsRoute() {
 
   return (
     <MyActionsScreen
-      onOpenDept={(id) => navigate(`/departments/${id}`)}
+      onOpenDept={(id) => navigate(`/departments/${id}/flow`)}
       onOpenReminder={(planIndex) => {
         const plan = plans[planIndex]
         if (!plan) return

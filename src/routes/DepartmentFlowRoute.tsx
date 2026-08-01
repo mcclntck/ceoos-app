@@ -45,7 +45,7 @@ export function DepartmentFlowRoute() {
       conversations={conversations}
       doneCount={doneCount}
       planCount={planCount}
-      onBack={() => navigate(`/departments/${dept.id}`)}
+      onBack={() => navigate('/departments')}
       onOpenActive={() => {
         const idx = plans.findIndex((p) => p.deptId === dept.id && !p.done)
         if (idx >= 0) navigate(`/departments/${dept.id}/flow`, { state: { planIndex: idx } })

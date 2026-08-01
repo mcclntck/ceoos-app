@@ -8,7 +8,7 @@
    branch. That branch is the only one implemented here; the function keeps
    `buildTurns(dept)`'s shape/name close to source for clarity if a
    conversational data shape is ever reintroduced. */
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Button } from '@/design-system'
 import type { DepartmentRuntime } from '@/departments/types'
 import { FlowHeader } from './FlowHeader'
@@ -18,6 +18,7 @@ import { ChatInput } from './ChatInput'
 import type { ChatDraft } from './ChatInput'
 import { fetchCoachAcknowledgement } from './chatAcknowledgement'
 import type { AcknowledgementTurn } from './chatAcknowledgement'
+import { useKeyboardInset } from './useKeyboardInset'
 
 /** The prototype's hardcoded "coach is typing" pause before the next question appears. */
 export const TYPING_DELAY_MS = 650
@@ -79,6 +80,25 @@ export function ChatQuestions({ dept, answers, setAnswer, onBack, onDone }: Chat
      Populated after the real network call resolves — see send() below. */
   const [acknowledgements, setAcknowledgements] = useState<Record<number, string>>({})
 
+  /* Keyboard-aware composer: the footer is pinned with `position: fixed` and
+     offset by the on-screen keyboard's height (via VisualViewport) so it floats
+     just above the keyboard instead of the whole layout reflowing/squeezing when
+     the keyboard opens — standard chat-app behaviour. The scroll area's bottom
+     padding mirrors the footer's own height so messages never sit underneath it. */
+  const keyboardInset = useKeyboardInset()
+  const footerRef = useRef<HTMLDivElement | null>(null)
+  const [footerHeight, setFooterHeight] = useState(0)
+
+  useLayoutEffect(() => {
+    const el = footerRef.current
+    if (!el) return
+    setFooterHeight(el.offsetHeight)
+    if (typeof ResizeObserver === 'undefined') return
+    const ro = new ResizeObserver(() => setFooterHeight(el.offsetHeight))
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [allDone, typing])
+
   useEffect(() => {
     setTyping(true)
     const t = setTimeout(() => setTyping(false), TYPING_DELAY_MS)
@@ -93,6 +113,15 @@ export function ChatQuestions({ dept, answers, setAnswer, onBack, onDone }: Chat
     const el = scRef.current
     if (el) el.scrollTop = el.scrollHeight
   }, [activeIdx, typing, answers, acknowledgements])
+
+  /* Tapping the chat (not the composer itself) dismisses the keyboard, matching
+     standard chat-app tap-to-dismiss behaviour. */
+  const dismissKeyboard = () => {
+    const active = document.activeElement
+    if (active instanceof HTMLElement && (active.tagName === 'TEXTAREA' || active.tagName === 'INPUT')) {
+      active.blur()
+    }
+  }
 
   const canSend = draft.picks.length > 0 || draft.text.trim().length > 0
   const send = () => {
@@ -143,7 +172,14 @@ export function ChatQuestions({ dept, answers, setAnswer, onBack, onDone }: Chat
       />
       <div
         ref={scRef}
-        style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', padding: '18px 20px 8px', WebkitOverflowScrolling: 'touch' }}
+        onPointerDown={dismissKeyboard}
+        style={{
+          flex: 1,
+          overflowY: 'auto',
+          overflowX: 'hidden',
+          padding: `18px 20px ${footerHeight + 8}px`,
+          WebkitOverflowScrolling: 'touch',
+        }}
       >
         {visible.map((i) => {
           const t = turns[i]
@@ -162,7 +198,18 @@ export function ChatQuestions({ dept, answers, setAnswer, onBack, onDone }: Chat
           </CoachRow>
         )}
       </div>
-      <div style={{ padding: '12px 16px 34px', borderTop: '1px solid var(--border-subtle)', background: 'rgba(0,0,0,0.35)' }}>
+      <div
+        ref={footerRef}
+        style={{
+          position: 'fixed',
+          left: 0,
+          right: 0,
+          bottom: keyboardInset,
+          padding: '12px 16px calc(12px + env(safe-area-inset-bottom))',
+          borderTop: '1px solid var(--border-subtle)',
+          background: '#0a0a0a',
+        }}
+      >
         {allDone ? (
           <Button variant="primary" size="lg" fullWidth onClick={onDone}>
             Pick my action

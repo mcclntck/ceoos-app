@@ -169,4 +169,35 @@ describe('ChatQuestions LLM acknowledgement', () => {
     const coachRow = coachAnswerBubble.closest('div[style*="align-items: flex-end"]')
     expect(coachRow?.querySelector('svg')).toBeTruthy()
   })
+
+  it('still surfaces a follow-up question when the model classifies "answer" but leaves the acknowledgement blank', async () => {
+    // Regression: an "answer" classification with an empty acknowledgement used to
+    // collapse the WHOLE response to null in llmCoach.ts (treated identically to a
+    // network failure), which discarded any follow_up_question the model DID
+    // provide — the coach's follow-up would silently vanish with no visible trace.
+    // The classification itself ("answer") is still valid and must be honoured.
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({
+        ok: true,
+        json: async () => ({ kind: 'answer', acknowledgement: '', followUpQuestion: 'What made you land on that number?' }),
+      })),
+    )
+    vi.useFakeTimers()
+    const { setAnswer } = renderChatQuestions()
+    act(() => {
+      vi.advanceTimersByTime(TYPING_DELAY_MS + 50)
+    })
+    const textarea = screen.getByPlaceholderText('Answer in your own words…') as HTMLTextAreaElement
+    fireEvent.change(textarea, { target: { value: '7 out of 10' } })
+    fireEvent.click(screen.getByRole('button', { name: '' }))
+    vi.useRealTimers()
+
+    await waitFor(() => {
+      expect(setAnswer).toHaveBeenCalledWith(1, { picks: [], text: '7 out of 10' })
+    })
+    await waitFor(() => {
+      expect(screen.getByText('What made you land on that number?')).toBeTruthy()
+    })
+  })
 })

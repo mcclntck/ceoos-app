@@ -31,12 +31,16 @@ export async function fetchCoachAcknowledgement(
     const data = (await res.json()) as { kind?: string; acknowledgement?: string; followUpQuestion?: string; answerToUser?: string }
     if (data.kind === 'question') {
       const answerToUser = data.answerToUser?.trim() ?? ''
-      if (!answerToUser) return null
-      return { kind: 'question', answerToUser }
+      // No usable answer text despite the "question" classification — fall back
+      // to the "answer" path below rather than discarding the message entirely
+      // (the classification itself doesn't change what the user actually typed).
+      if (answerToUser) return { kind: 'question', answerToUser }
     }
-    const acknowledgement = data.acknowledgement?.trim() ?? ''
-    if (!acknowledgement) return null
-    return { kind: 'answer', acknowledgement, followUpQuestion: data.followUpQuestion?.trim() || undefined }
+    // A classified "answer" is honoured even if the acknowledgement text is empty
+    // (e.g. the model classified correctly but left the field blank) — the message
+    // must still be recorded as the answer, just without an acknowledgement bubble.
+    // Only a genuine transport/parse failure (caught below) should return null.
+    return { kind: 'answer', acknowledgement: data.acknowledgement?.trim() ?? '', followUpQuestion: data.followUpQuestion?.trim() || undefined }
   } catch {
     return null
   }

@@ -153,5 +153,17 @@ describe('ChatQuestions LLM acknowledgement', () => {
     })
     // The fixed question is still visible/answerable — the composer is still up.
     expect(screen.getByPlaceholderText('Answer in your own words…')).toBeTruthy()
+
+    // Bubble placement must not be swapped: the user's own question renders as a
+    // right-aligned UserRow, and the coach's reply renders as a left-aligned
+    // CoachRow (with the sparkle-icon avatar) — regression coverage for a bug
+    // where these were flipped.
+    const userQuestionBubbles = screen.getAllByText('what do you mean by score?')
+    const userRow = userQuestionBubbles.map((el) => el.closest('div[style*="justify-content: flex-end"]')).find(Boolean)
+    expect(userRow).toBeTruthy()
+
+    const coachAnswerBubble = screen.getByText('Great question — a score just means where you feel you are today.')
+    const coachRow = coachAnswerBubble.closest('div[style*="align-items: flex-end"]')
+    expect(coachRow?.querySelector('svg')).toBeTruthy()
   })
 })

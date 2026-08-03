@@ -272,8 +272,14 @@ export function ChatQuestions({
               {t.type === 'ask' && answered(i) && acknowledgements[i] && <CoachRow>{acknowledgements[i]}</CoachRow>}
               {(exchanges[i] ?? []).map((ex, exIdx) => (
                 <div key={exIdx}>
-                  <CoachRow>{ex.question}</CoachRow>
-                  {ex.kind === 'user_question' && <UserRow>{ex.answer}</UserRow>}
+                  {ex.kind === 'coach_followup' ? (
+                    <CoachRow>{ex.question}</CoachRow>
+                  ) : (
+                    <>
+                      <UserRow>{ex.question}</UserRow>
+                      <CoachRow>{ex.answer}</CoachRow>
+                    </>
+                  )}
                 </div>
               ))}
               {i === activeIdx && pendingMessage != null && <UserRow>{pendingMessage}</UserRow>}

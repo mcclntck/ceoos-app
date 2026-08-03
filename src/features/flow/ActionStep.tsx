@@ -20,13 +20,17 @@ export interface ActionStepProps {
   dept: DepartmentRuntime
   action: string | null
   customActions: string[]
+  /** LLM-generated suggestions grounded in this chat's transcript — falls back
+   *  to dept.actions when null or too short a result (see DepartmentFlow). */
+  suggestedActions?: string[] | null
   onSelectAction: (action: string) => void
   onOpenCustom: () => void
   onBack: () => void
   onNext: () => void
 }
 
-export function ActionStep({ dept, action, customActions, onSelectAction, onOpenCustom, onBack, onNext }: ActionStepProps) {
+export function ActionStep({ dept, action, customActions, suggestedActions, onSelectAction, onOpenCustom, onBack, onNext }: ActionStepProps) {
+  const baseActions = suggestedActions && suggestedActions.length >= 2 ? suggestedActions : dept.actions
   return (
     <>
       <FlowHeader dept={dept} onBack={onBack} />
@@ -49,7 +53,7 @@ export function ActionStep({ dept, action, customActions, onSelectAction, onOpen
           <p style={{ fontFamily: 'var(--font-primary)', fontSize: 14.5, color: 'var(--text-secondary)', lineHeight: 1.5, margin: '0 0 22px' }}>
             Small and real beats big and someday. Nobody hands you a KPI for this one — choose it yourself.
           </p>
-          {[...dept.actions, ...customActions].map((a) => (
+          {[...baseActions, ...customActions].map((a) => (
             <OptionRow key={a} label={a} selected={action === a} onClick={() => onSelectAction(a)} />
           ))}
           <button

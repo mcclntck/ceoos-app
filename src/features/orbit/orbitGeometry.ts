@@ -7,15 +7,19 @@ export interface OrbitLevelGeometry {
   dim: number
 }
 
-/* Engagement level -> orbit geometry. Higher level = smaller radius (closer) + bigger bubble. */
+/* Engagement level -> orbit geometry. Higher level = smaller radius (closer) + bigger bubble.
+   Sizes are ~1.22x the original ceoos-orbit.jsx values (product decision: orbs read as too
+   small); radii nudged up slightly alongside them so clearance to the hub and between
+   adjacent orbs (departments are fixed 72deg apart) both stay comfortably positive at every
+   level, and the largest orbs still stay inside the authored ORBIT_W x ORBIT_H canvas. */
 export const ORBIT_LEVELS: OrbitLevelGeometry[] = [
-  { r: 152, size: 64, dim: 0.62 }, // 0 untouched — furthest out
-  { r: 140, size: 74, dim: 0.82 }, // 1 reflected
-  { r: 128, size: 84, dim: 1 }, // 2 committed (has action)
-  { r: 116, size: 94, dim: 1 }, // 3 done + mood logged — closest
+  { r: 156, size: 78, dim: 0.62 }, // 0 untouched — furthest out
+  { r: 144, size: 90, dim: 0.82 }, // 1 reflected
+  { r: 134, size: 102, dim: 1 }, // 2 committed (has action)
+  { r: 124, size: 115, dim: 1 }, // 3 done + mood logged — closest
 ]
 
-export const YOU_SIZE = 104
+export const YOU_SIZE = 116
 
 /* Orbit canvas is authored at this size, then uniformly scaled to fit narrow screens. */
 export const ORBIT_W = 360

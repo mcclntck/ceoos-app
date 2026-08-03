@@ -14,6 +14,7 @@ const O_FONT = 'var(--font-primary)'
 const O_EYEBROW: React.CSSProperties = {
   fontFamily: O_FONT,
   fontSize: 11,
+  lineHeight: 1.4,
   letterSpacing: '0.2em',
   textTransform: 'uppercase',
   color: 'var(--accent)',
@@ -27,7 +28,7 @@ interface OStepDotsProps {
 
 function OStepDots({ i, n }: OStepDotsProps) {
   return (
-    <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
+    <div style={{ display: 'flex', gap: 8 }}>
       {Array.from({ length: n }).map((_, k) => (
         <span
           key={k}
@@ -65,8 +66,26 @@ export function OnboardingFlow({ onDone }: OnboardingFlowProps) {
     <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column' }}>
       <AppBackdrop glow="onboarding" />
       <StatusBar />
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '6px var(--ceoos-gutter) 0' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px var(--ceoos-gutter) 0', minHeight: 44 }}>
         <OStepDots i={i} n={O_STEPS.length} />
+        {!last && (
+          <button
+            onClick={() => setI(O_STEPS.length - 1)}
+            style={{
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              minHeight: 44,
+              padding: '0 0 0 16px',
+              fontFamily: O_FONT,
+              fontSize: 14,
+              fontWeight: 600,
+              color: 'var(--text-muted)',
+            }}
+          >
+            Skip intro
+          </button>
+        )}
       </div>
 
       <div
@@ -83,22 +102,22 @@ export function OnboardingFlow({ onDone }: OnboardingFlowProps) {
           animation: 'obFade 460ms ease',
         }}
       >
-        <div style={{ margin: 'auto 0', width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+        <div style={{ margin: 'clamp(8px, 4vh, 40px) 0 auto', width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
           {step.art && (
-            <div style={{ width: '100%', marginBottom: 'clamp(16px, 3vh, 34px)', display: 'flex', justifyContent: 'center' }}>
+            <div style={{ width: '100%', marginBottom: 'clamp(10px, 2.4vh, 34px)', display: 'flex', justifyContent: 'center' }}>
               {step.art}
             </div>
           )}
-          <div style={{ ...O_EYEBROW, marginBottom: 14 }}>{step.eyebrow}</div>
+          <div style={{ ...O_EYEBROW, marginBottom: 'clamp(8px, 1.6vh, 14px)' }}>{step.eyebrow}</div>
           {step.title && (
             <h1
               style={{
                 fontFamily: O_FONT,
-                fontSize: 'calc(var(--ceoos-title) + 3px)',
+                fontSize: 'clamp(22px, 3.2vh + 8px, calc(var(--ceoos-title) + 3px))',
                 fontWeight: 300,
                 color: 'var(--text-primary)',
                 lineHeight: 1.18,
-                margin: '0 0 16px',
+                margin: '0 0 clamp(8px, 1.6vh, 16px)',
                 textWrap: 'pretty',
               }}
             >
@@ -108,10 +127,10 @@ export function OnboardingFlow({ onDone }: OnboardingFlowProps) {
           <p
             style={{
               fontFamily: O_FONT,
-              fontSize: 'var(--ceoos-body)',
+              fontSize: 'clamp(13px, 1.4vh + 4.5px, var(--ceoos-body))',
               fontWeight: 300,
               color: 'var(--text-secondary)',
-              lineHeight: 1.55,
+              lineHeight: 1.4,
               margin: 0,
               width: '100%',
               textWrap: 'pretty',
@@ -125,8 +144,8 @@ export function OnboardingFlow({ onDone }: OnboardingFlowProps) {
               style={{
                 display: 'flex',
                 flexDirection: 'column',
-                gap: 12,
-                marginTop: 24,
+                gap: 'clamp(4px, 1.1vh, 12px)',
+                marginTop: 'clamp(10px, 1.8vh, 24px)',
                 alignSelf: 'center',
                 alignItems: 'flex-start',
                 maxWidth: 360,
@@ -163,33 +182,11 @@ export function OnboardingFlow({ onDone }: OnboardingFlowProps) {
         style={{
           padding: '0 var(--ceoos-gutter) calc(34px + env(safe-area-inset-bottom))',
           flexShrink: 0,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: 4,
         }}
       >
         <Button variant="primary" size="lg" fullWidth disabled={blocked} onClick={next}>
           {last ? "Let's get started!" : 'Continue'}
         </Button>
-        {!last && (
-          <button
-            onClick={() => setI(O_STEPS.length - 1)}
-            style={{
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              minHeight: 44,
-              padding: '0 16px',
-              fontFamily: O_FONT,
-              fontSize: 14,
-              fontWeight: 600,
-              color: 'var(--text-muted)',
-            }}
-          >
-            Skip intro
-          </button>
-        )}
       </div>
       <style>{`@keyframes obFade{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}`}</style>
     </div>

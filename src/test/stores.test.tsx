@@ -40,13 +40,14 @@ describe('PlansStore', () => {
     return <PlansProvider>{children}</PlansProvider>
   }
 
-  it('seeds with CEOOS_SEED_PLANS', () => {
+  it('starts empty for a new/reset user (no fabricated seed actions)', () => {
     const { result } = renderHook(() => usePlans(), { wrapper })
-    expect(result.current.plans.length).toBeGreaterThan(0)
+    expect(result.current.plans).toEqual([])
   })
 
   it('marks a plan done and records mood', () => {
     const { result } = renderHook(() => usePlans(), { wrapper })
+    act(() => result.current.addPlan({ deptId: 'career', action: 'Test action', dayLabel: 'Today', timeLabel: 'Morning · 8:00', done: false, mood: null }))
     act(() => result.current.markDone(0, 'Good'))
     expect(result.current.plans[0].done).toBe(true)
     expect(result.current.plans[0].mood).toBe('Good')

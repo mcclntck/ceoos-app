@@ -30,3 +30,6 @@ dist-ssr
 
 # Impeccable skill local cache
 .impeccable/
+
+# Claude Code local settings
+.claude/

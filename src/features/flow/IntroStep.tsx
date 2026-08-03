@@ -1,11 +1,14 @@
 /* Ported verbatim from ceoos-flow.jsx's `intro` step body (inside
    DepartmentFlow) — the zoomed-in department hero, stat rings, and chat
    history list, ending in the "New chat" CTA. */
+import { useState } from 'react'
+import type { UIEvent } from 'react'
 import { BackButton } from '@/features/chrome'
 import { GlassCard, Button, SparkleIcon } from '@/design-system'
 import { ORBIT_TONE, ORBIT_ICONS, fTone } from '@/departments/departmentTones'
-import type { DepartmentRuntime, Conversation } from '@/departments/types'
+import type { DepartmentRuntime, Conversation, Plan } from '@/departments/types'
 import { Scroll } from './Scroll'
+import { ActiveActionsSheet } from './ActiveActionsSheet'
 
 interface StatRingProps {
   value: number | string
@@ -47,22 +50,60 @@ export interface IntroStepProps {
   doneCount: number
   planCount: number
   conversations: Conversation[]
-  onOpenActive?: (() => void) | null
+  /** That department's not-yet-done actions, paired with their index in the
+   *  full plans array (needed to resume the right one via onOpenPlan). */
+  activePlans: { plan: Plan; index: number }[]
+  onOpenPlan?: ((planIndex: number) => void) | null
+  onOpenConversation?: ((conversationId: string) => void) | null
   onBack: () => void
   onNewChat: () => void
 }
 
-export function IntroStep({ dept, doneCount, planCount, conversations, onOpenActive, onBack, onNewChat }: IntroStepProps) {
+export function IntroStep({
+  dept,
+  doneCount,
+  planCount,
+  conversations,
+  activePlans,
+  onOpenPlan,
+  onOpenConversation,
+  onBack,
+  onNewChat,
+}: IntroStepProps) {
   const hue = fTone(dept.id).hue
   const tone = ORBIT_TONE[dept.glow] ?? { core: '#151515', edge: 'rgba(255,255,255,0.16)' }
   const icons = ORBIT_ICONS
 
+  const [activeSheetOpen, setActiveSheetOpen] = useState(false)
+  const openActiveActions = () => {
+    if (!onOpenPlan || activePlans.length === 0) return
+    if (activePlans.length === 1) onOpenPlan(activePlans[0].index)
+    else setActiveSheetOpen(true)
+  }
+
+  const [scrolled, setScrolled] = useState(false)
+  const handleScroll = (e: UIEvent<HTMLDivElement>) => {
+    setScrolled(e.currentTarget.scrollTop > 4)
+  }
+
   return (
     <>
-      <div style={{ display: 'flex', alignItems: 'center', padding: '4px 20px 0' }}>
+      <div
+        style={{
+          position: 'relative',
+          zIndex: 5,
+          display: 'flex',
+          alignItems: 'center',
+          padding: '8px 20px',
+          background: scrolled ? 'var(--surface-glass)' : '#000',
+          backdropFilter: scrolled ? 'blur(var(--blur-chrome))' : 'none',
+          WebkitBackdropFilter: scrolled ? 'blur(var(--blur-chrome))' : 'none',
+          transition: 'background 200ms ease',
+        }}
+      >
         <BackButton onClick={onBack} />
       </div>
-      <Scroll>
+      <Scroll onScroll={handleScroll}>
         <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 4 }}>
           <svg width="300" height="86" viewBox="0 0 300 86" style={{ position: 'absolute', top: -28, left: '50%', transform: 'translateX(-50%)', pointerEvents: 'none' }}>
             <path d="M4 8C40 66 110 82 150 82s110-16 146-74" fill="none" stroke="rgba(233,234,237,0.20)" strokeWidth="1" />
@@ -112,11 +153,11 @@ export function IntroStep({ dept, doneCount, planCount, conversations, onOpenAct
             />
             <StatRing value={`${conversations.length}x`} label="Chat streak" pct={Math.min(1, conversations.length / 5)} ringHue="var(--accent)" />
             <StatRing
-              value={Math.max(0, planCount - doneCount)}
+              value={activePlans.length}
               label="Active actions"
-              pct={planCount ? (planCount - doneCount) / planCount : 0}
+              pct={planCount ? activePlans.length / planCount : 0}
               ringHue={hue}
-              onPress={planCount - doneCount > 0 && onOpenActive ? onOpenActive : null}
+              onPress={activePlans.length > 0 && onOpenPlan ? openActiveActions : null}
             />
           </div>
         </div>
@@ -127,39 +168,50 @@ export function IntroStep({ dept, doneCount, planCount, conversations, onOpenAct
             <span style={{ fontFamily: 'var(--font-primary)', fontSize: 13, color: 'var(--text-muted)' }}>{conversations.length}</span>
           </div>
           {conversations.length === 0 ? (
-            <GlassCard radius={18} padding={18}>
-              <div style={{ fontFamily: 'var(--font-primary)', fontSize: 14.5, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-                No chats here yet. Six questions, honest answers, then one thing you&rsquo;ll actually do.
-              </div>
-            </GlassCard>
+            <div style={{ fontFamily: 'var(--font-primary)', fontSize: 14.5, color: 'var(--text-secondary)', lineHeight: 1.5, padding: '4px 2px' }}>
+              No chats here yet. Six questions, honest answers, then one thing you&rsquo;ll actually do.
+            </div>
           ) : (
-            conversations.map((c) => (
-              <div key={c.id} style={{ marginBottom: 12 }}>
-                <GlassCard radius={18} padding={16}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
-                    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke={hue} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
-                      <path d="M21 12a8 8 0 0 1-8 8H8l-5 2 1.5-4.2A8 8 0 0 1 13 4a8 8 0 0 1 8 8z" />
-                    </svg>
-                    <span style={{ fontFamily: 'var(--font-primary)', fontSize: 14.5, fontWeight: 600, color: 'var(--text-primary)', minWidth: 0 }}>{c.title}</span>
-                    <span style={{ marginLeft: 'auto', fontFamily: 'var(--font-primary)', fontSize: 12, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{c.date}</span>
-                  </div>
-                  <div style={{ fontFamily: 'var(--font-primary)', fontSize: 13.5, fontWeight: 300, color: 'var(--text-secondary)', lineHeight: 1.5, marginTop: 9 }}>
-                    {c.summary}
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--border-subtle)' }}>
-                    <span style={{ width: 20, height: 20, flexShrink: 0, borderRadius: '50%', background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--text-on-accent)" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M20 6L9 17l-5-5" />
-                      </svg>
-                    </span>
-                    <span style={{ fontFamily: 'var(--font-primary)', fontSize: 13.5, fontWeight: 500, color: 'var(--text-primary)', lineHeight: 1.3 }}>{c.action}</span>
-                    {c.mood && (
-                      <span style={{ marginLeft: 'auto', fontFamily: 'var(--font-primary)', fontSize: 12, fontWeight: 600, color: hue, whiteSpace: 'nowrap' }}>{c.mood}</span>
-                    )}
-                  </div>
-                </GlassCard>
-              </div>
-            ))
+            conversations.map((c) => {
+              const inProgress = c.status === 'in-progress'
+              const Row = inProgress && onOpenConversation ? 'button' : 'div'
+              return (
+                <div key={c.id} style={{ marginBottom: 12 }}>
+                  <Row
+                    onClick={inProgress && onOpenConversation ? () => onOpenConversation(c.id) : undefined}
+                    style={inProgress ? { display: 'block', width: '100%', textAlign: 'left', background: 'none', border: 'none', padding: 0, cursor: onOpenConversation ? 'pointer' : 'default' } : undefined}
+                  >
+                    <GlassCard radius={18} padding={16} style={inProgress ? { border: '1px dashed var(--border-strong)' } : undefined}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
+                        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke={hue} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                          <path d="M21 12a8 8 0 0 1-8 8H8l-5 2 1.5-4.2A8 8 0 0 1 13 4a8 8 0 0 1 8 8z" />
+                        </svg>
+                        <span style={{ fontFamily: 'var(--font-primary)', fontSize: 14.5, fontWeight: 600, color: 'var(--text-primary)', minWidth: 0 }}>{c.title}</span>
+                        <span style={{ marginLeft: 'auto', fontFamily: 'var(--font-primary)', fontSize: 12, color: inProgress ? 'var(--accent)' : 'var(--text-muted)', whiteSpace: 'nowrap' }}>
+                          {inProgress ? 'In progress' : c.date}
+                        </span>
+                      </div>
+                      <div style={{ fontFamily: 'var(--font-primary)', fontSize: 13.5, fontWeight: 300, color: 'var(--text-secondary)', lineHeight: 1.5, marginTop: 9 }}>
+                        {c.summary}
+                      </div>
+                      {!inProgress && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--border-subtle)' }}>
+                          <span style={{ width: 20, height: 20, flexShrink: 0, borderRadius: '50%', background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--text-on-accent)" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M20 6L9 17l-5-5" />
+                            </svg>
+                          </span>
+                          <span style={{ fontFamily: 'var(--font-primary)', fontSize: 13.5, fontWeight: 500, color: 'var(--text-primary)', lineHeight: 1.3 }}>{c.action}</span>
+                          {c.mood && (
+                            <span style={{ marginLeft: 'auto', fontFamily: 'var(--font-primary)', fontSize: 12, fontWeight: 600, color: hue, whiteSpace: 'nowrap' }}>{c.mood}</span>
+                          )}
+                        </div>
+                      )}
+                    </GlassCard>
+                  </Row>
+                </div>
+              )
+            })
           )}
         </div>
       </Scroll>
@@ -168,6 +220,15 @@ export function IntroStep({ dept, doneCount, planCount, conversations, onOpenAct
           New chat
         </Button>
       </div>
+      <ActiveActionsSheet
+        open={activeSheetOpen}
+        actions={activePlans}
+        onClose={() => setActiveSheetOpen(false)}
+        onSelect={(planIndex) => {
+          setActiveSheetOpen(false)
+          onOpenPlan?.(planIndex)
+        }}
+      />
     </>
   )
 }

@@ -56,7 +56,17 @@ describe('ChatQuestions', () => {
         answers[i] = v
       })
 
-      render(<ChatQuestions dept={sampleDept} answers={answers} setAnswer={setAnswer} onBack={() => {}} onDone={() => {}} />)
+      render(
+        <ChatQuestions
+          dept={sampleDept}
+          answers={answers}
+          setAnswer={setAnswer}
+          onBack={() => {}}
+          onDone={() => {}}
+          canMakeLlmCall={() => false}
+          recordLlmCall={() => {}}
+        />,
+      )
 
       // Immediately after mount the coach is "typing" (TYPING_DELAY_MS timeout pending)
       // — the composer is not rendered yet, only a placeholder-height spacer.

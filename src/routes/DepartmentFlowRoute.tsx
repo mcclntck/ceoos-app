@@ -9,10 +9,11 @@ import { useDepartments } from '@/state/departmentsStore'
 import { usePlans } from '@/state/plansStore'
 import { useConversations } from '@/state/conversationsStore'
 import { CEOOS_MOODS } from '@/departments/departments.config'
-import type { DeptId, Plan } from '@/departments/types'
+import type { ChatAnswer, DeptId, Plan } from '@/departments/types'
 
 interface FlowLocationState {
   planIndex?: number
+  conversationId?: string
 }
 
 export function DepartmentFlowRoute() {
@@ -21,48 +22,87 @@ export function DepartmentFlowRoute() {
   const location = useLocation()
   const { departments, raiseLevel } = useDepartments()
   const { plans, upsertAt, addPlan } = usePlans()
-  const { conversationsByDept, addConversation } = useConversations()
+  const { conversationsByDept, upsertConversation } = useConversations()
 
   const dept = departments.find((d) => d.id === (deptId as DeptId))
-  const planIndex = (location.state as FlowLocationState | null)?.planIndex ?? null
+  const locationState = location.state as FlowLocationState | null
+  const planIndex = locationState?.planIndex ?? null
   const plan = planIndex != null ? plans[planIndex] : undefined
+  const resumeConversationId = locationState?.conversationId ?? null
+  const resumeConversation = resumeConversationId
+    ? (conversationsByDept[deptId as DeptId] ?? []).find((c) => c.id === resumeConversationId)
+    : undefined
 
   if (!dept) return <Navigate to="/departments" replace />
 
   const conversations = conversationsByDept[dept.id] ?? []
   const doneCount = plans.filter((p) => p.deptId === dept.id && p.done).length
   const planCount = plans.filter((p) => p.deptId === dept.id).length
+  const activePlans = plans
+    .map((plan, index) => ({ plan, index }))
+    .filter(({ plan }) => plan.deptId === dept.id && !plan.done)
 
-  const entry = plan
-    ? { step: 'did' as const, done: plan.done, action: plan.action, dayLabel: plan.dayLabel, timeLabel: plan.timeLabel }
-    : null
+  const entry = resumeConversation
+    ? { step: 'q' as const, conversationId: resumeConversation.id, answers: resumeConversation.answers ?? {} }
+    : plan
+      ? { step: 'did' as const, done: plan.done, action: plan.action, dayLabel: plan.dayLabel, timeLabel: plan.timeLabel, planIndex: planIndex! }
+      : null
+
+  /* Forces a fresh DepartmentFlow instance whenever what's being resumed changes —
+     otherwise a same-path navigation (e.g. tapping a different in-progress chat, or
+     a different reminder, while already on this route) would just update props on
+     the SAME mounted instance, and DepartmentFlow's useState(entry?.step ?? 'intro')
+     initializer would never re-run to pick up the new entry. */
+  const flowKey = `${dept.id}:${resumeConversationId ?? ''}:${planIndex ?? ''}`
 
   return (
     <DepartmentFlow
+      key={flowKey}
       dept={dept}
       moods={CEOOS_MOODS}
       entry={entry}
       conversations={conversations}
       doneCount={doneCount}
       planCount={planCount}
+      activePlans={activePlans}
       onBack={() => navigate('/departments')}
-      onOpenActive={() => {
-        const idx = plans.findIndex((p) => p.deptId === dept.id && !p.done)
-        if (idx >= 0) navigate(`/departments/${dept.id}/flow`, { state: { planIndex: idx } })
+      onOpenPlan={(idx) => navigate(`/departments/${dept.id}/flow`, { state: { planIndex: idx } })}
+      onOpenConversation={(conversationId) => {
+        navigate(`/departments/${dept.id}/flow`, { state: { conversationId } })
       }}
       onAddAction={() => navigate('/actions')}
-      onComplete={(completedDeptId, level, completedPlan: Plan) => {
+      onSaveDraft={(draftDeptId, conversationId, answers: Record<number, ChatAnswer>) => {
+        const answeredCount = Object.values(answers).filter(
+          (a) => (a.picks && a.picks.length) || (a.text && a.text.trim()),
+        ).length
+        upsertConversation(draftDeptId, {
+          id: conversationId,
+          date: 'In progress',
+          title: 'Reflection',
+          summary: `${answeredCount} of ${dept.questions.length} questions answered.`,
+          action: '',
+          mood: null,
+          status: 'in-progress',
+          answers,
+        })
+      }}
+      onSavePlan={(_saveDeptId, plan, existingIndex) => {
+        if (existingIndex != null) upsertAt(existingIndex, plan)
+        else addPlan(plan)
+      }}
+      onComplete={(completedDeptId, level, completedPlan: Plan, conversationId: string, completedPlanIndex: number | null) => {
         raiseLevel(completedDeptId, level)
-        addConversation(completedDeptId, {
-          id: `c-${completedDeptId}-${Date.now()}`,
+        upsertConversation(completedDeptId, {
+          id: conversationId,
           date: 'Just now',
           title: 'Reflection',
           summary: 'You reflected, committed to an action and logged how you feel.',
           action: completedPlan.action,
           mood: completedPlan.mood,
+          status: 'done',
         })
-        if (planIndex != null) {
-          upsertAt(planIndex, completedPlan)
+        if (completedPlanIndex != null) {
+          upsertAt(completedPlanIndex, completedPlan)
         } else {
           addPlan(completedPlan)
         }

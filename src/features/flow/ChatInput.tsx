@@ -29,7 +29,6 @@ export function ChatInput({ draft, setDraft, canSend, send, onSuggest, suggestLa
         borderRadius: 22,
         padding: '8px 8px 8px 16px',
         transition: 'border-color 160ms ease',
-        boxShadow: focus ? '0 0 0 4px rgba(202,219,43,0.12)' : 'none',
       }}
     >
       <textarea

@@ -31,13 +31,18 @@ export interface RecommendStepProps {
   action: string | null
   mood: number
   moods: readonly string[]
+  /** LLM-generated suggestions grounded in this chat's transcript — falls back
+   *  to dept.actions when null or too short a result (see DepartmentFlow). Reuses
+   *  the same cached value ActionStep received; no second fetch for this retry loop. */
+  suggestedActions?: string[] | null
   onSelectAction: (action: string) => void
   onBack: () => void
   onNext: () => void
 }
 
-export function RecommendStep({ dept, lastAction, action, mood, moods, onSelectAction, onBack, onNext }: RecommendStepProps) {
-  const alts = dept.actions.filter((a) => a !== lastAction)
+export function RecommendStep({ dept, lastAction, action, mood, moods, suggestedActions, onSelectAction, onBack, onNext }: RecommendStepProps) {
+  const baseActions = suggestedActions && suggestedActions.length >= 2 ? suggestedActions : dept.actions
+  const alts = baseActions.filter((a) => a !== lastAction)
   return (
     <>
       <FlowHeader dept={dept} onBack={onBack} />

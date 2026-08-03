@@ -112,68 +112,19 @@ export const CEOOS_DEPARTMENTS: Department[] = [
 
 export const CEOOS_MOODS = ['Drained', 'Low', 'Steady', 'Good', 'Energised'] as const
 
-export const CEOOS_SEED_PLANS: Plan[] = [
-  { deptId: 'health', action: 'Schedule three 20-min walks this week', dayLabel: 'Today', timeLabel: 'Morning · 8:00', done: false, mood: null },
-  {
-    deptId: 'love',
-    action: 'Plan a device-free dinner with someone I love',
-    dayLabel: 'Tomorrow',
-    timeLabel: 'Evening · 6:30',
-    done: false,
-    mood: null,
-  },
-]
+/* Empty for a new/reset user — see CEOOS_SEED_CONVERSATIONS above for the same
+   reasoning: fabricated "active actions" shouldn't appear before the user has
+   actually done anything. */
+export const CEOOS_SEED_PLANS: Plan[] = []
 
+/* Empty for every department — new/reset users should see the app's genuine empty
+   state (IntroStep's "No chats here yet…" card), not fabricated conversation history. */
 export const CEOOS_SEED_CONVERSATIONS: Record<DeptId, Conversation[]> = {
-  career: [
-    {
-      id: 'c-car-1',
-      date: '18 July 2026',
-      title: 'Current state audit',
-      summary: 'Named unclear priorities as the main drag; committed to a focus block.',
-      action: 'Block 90 minutes of deep-focus time',
-      mood: 'Good',
-    },
-    {
-      id: 'c-car-2',
-      date: '2 July 2026',
-      title: 'Career by design',
-      summary: 'Sketched an ideal step-up role in 2–3 years and the value gap to close.',
-      action: 'Book a 20-min career chat with my manager',
-      mood: 'Energised',
-    },
-  ],
-  health: [
-    {
-      id: 'c-hea-1',
-      date: '15 July 2026',
-      title: 'Energy & recovery',
-      summary: 'Sleep is the first thing to slip when busy; set an earlier wind-down.',
-      action: 'Set a wind-down reminder 30 min before bed',
-      mood: 'Steady',
-    },
-  ],
-  wealth: [
-    {
-      id: 'c-wea-1',
-      date: '9 July 2026',
-      title: 'Money & peace of mind',
-      summary: 'Wanted more control over saving; automated a monthly transfer.',
-      action: 'Set up one automatic transfer to savings',
-      mood: 'Good',
-    },
-  ],
+  career: [],
+  health: [],
+  wealth: [],
   fun: [],
-  love: [
-    {
-      id: 'c-lov-1',
-      date: '11 July 2026',
-      title: 'Presence & connection',
-      summary: 'Realised evenings are distracted; planned real time with family.',
-      action: 'Plan a device-free dinner with someone I love',
-      mood: 'Energised',
-    },
-  ],
+  love: [],
 }
 
 /* CEOOS_ARTICLES is ported for completeness (Home tab reference) but unused —

@@ -6,7 +6,9 @@ import { STORAGE_KEYS, readJSON, writeJSON } from './persistence/localStorage'
 
 type ConversationsState = Record<DeptId, Conversation[]>
 
-type ConversationsAction = { type: 'ADD'; deptId: DeptId; conversation: Conversation }
+type ConversationsAction =
+  | { type: 'ADD'; deptId: DeptId; conversation: Conversation }
+  | { type: 'UPSERT'; deptId: DeptId; conversation: Conversation }
 
 function initialConversations(): ConversationsState {
   const out = {} as ConversationsState
@@ -20,6 +22,12 @@ function conversationsReducer(state: ConversationsState, action: ConversationsAc
   switch (action.type) {
     case 'ADD':
       return { ...state, [action.deptId]: [action.conversation, ...(state[action.deptId] ?? [])] }
+    case 'UPSERT': {
+      const existing = state[action.deptId] ?? []
+      const idx = existing.findIndex((c) => c.id === action.conversation.id)
+      const next = idx >= 0 ? existing.map((c, i) => (i === idx ? action.conversation : c)) : [action.conversation, ...existing]
+      return { ...state, [action.deptId]: next }
+    }
     default:
       return state
   }
@@ -28,6 +36,10 @@ function conversationsReducer(state: ConversationsState, action: ConversationsAc
 interface ConversationsContextValue {
   conversationsByDept: ConversationsState
   addConversation: (deptId: DeptId, conversation: Conversation) => void
+  /** Creates the conversation (by id) if it doesn't exist yet, otherwise updates it in
+   *  place — used for saving/re-saving an in-progress draft chat as the user answers
+   *  more questions, and for marking that same entry done on completion. */
+  upsertConversation: (deptId: DeptId, conversation: Conversation) => void
 }
 
 const ConversationsContext = createContext<ConversationsContextValue | null>(null)
@@ -46,7 +58,15 @@ export function ConversationsProvider({ children }: { children: ReactNode }) {
     [],
   )
 
-  const value = useMemo(() => ({ conversationsByDept: state, addConversation }), [state, addConversation])
+  const upsertConversation = useCallback(
+    (deptId: DeptId, conversation: Conversation) => dispatch({ type: 'UPSERT', deptId, conversation }),
+    [],
+  )
+
+  const value = useMemo(
+    () => ({ conversationsByDept: state, addConversation, upsertConversation }),
+    [state, addConversation, upsertConversation],
+  )
 
   return <ConversationsContext.Provider value={value}>{children}</ConversationsContext.Provider>
 }

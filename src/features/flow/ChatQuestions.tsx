@@ -10,14 +10,14 @@
    conversational data shape is ever reintroduced. */
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Button } from '@/design-system'
-import type { DepartmentRuntime } from '@/departments/types'
+import type { DepartmentRuntime, ChatAnswer } from '@/departments/types'
 import { FlowHeader } from './FlowHeader'
 import { CoachRow, UserRow, SayContent, TypingDots, CHAT_BUBBLE_KEYFRAMES } from './ChatBubbles'
-import type { ChatTurn } from './ChatBubbles'
+import type { ChatTurn, FollowUp } from './ChatBubbles'
 import { ChatInput } from './ChatInput'
 import type { ChatDraft } from './ChatInput'
-import { fetchCoachAcknowledgement } from './chatAcknowledgement'
-import type { AcknowledgementTurn } from './chatAcknowledgement'
+import { fetchCoachAcknowledgement } from './llmCoach'
+import type { AcknowledgementTurn } from './llmCoach'
 import { useKeyboardInset } from './useKeyboardInset'
 
 /** The prototype's hardcoded "coach is typing" pause before the next question appears. */
@@ -29,11 +29,6 @@ export function buildTurns(dept: DepartmentRuntime): ChatTurn[] {
   ]
   dept.questions.forEach((q) => turns.push({ type: 'ask', q: q.q }))
   return turns
-}
-
-export interface ChatAnswer {
-  picks?: string[]
-  text?: string
 }
 
 export function answerText(a: ChatAnswer | undefined | null): string {
@@ -49,9 +44,14 @@ export interface ChatQuestionsProps {
   setAnswer: (index: number, value: ChatAnswer) => void
   onBack: () => void
   onDone: () => void
+  /** Session-wide LLM call budget, owned by DepartmentFlow — see its
+   *  llmCallCountRef. Every acknowledgement/follow-up fetch attempt must check
+   *  canMakeLlmCall() before firing and call recordLlmCall() on attempt. */
+  canMakeLlmCall: () => boolean
+  recordLlmCall: () => void
 }
 
-export function ChatQuestions({ dept, answers, setAnswer, onBack, onDone }: ChatQuestionsProps) {
+export function ChatQuestions({ dept, answers, setAnswer, onBack, onDone, canMakeLlmCall, recordLlmCall }: ChatQuestionsProps) {
   const turns = useMemo(() => buildTurns(dept), [dept])
 
   const answered = (i: number): boolean => {
@@ -79,6 +79,21 @@ export function ChatQuestions({ dept, answers, setAnswer, onBack, onDone }: Chat
   /* LLM-generated acknowledgements, keyed by the turn index they follow.
      Populated after the real network call resolves — see send() below. */
   const [acknowledgements, setAcknowledgements] = useState<Record<number, string>>({})
+  /* Ephemeral follow-up questions, keyed by the fixed turn index they follow —
+     layered on top of the fixed 6-question backbone, never touching turns/
+     activeIdx/answered(). Not persisted (see plan's accepted scope cut). */
+  const [followUps, setFollowUps] = useState<Record<number, FollowUp>>({})
+
+  /* First visible turn with a follow-up question still awaiting an answer/skip.
+     When set, the composer targets the follow-up instead of the next fixed question. */
+  let pendingFollowUpIdx: number | null = null
+  for (const i of visible) {
+    const f = followUps[i]
+    if (f && f.question && f.answer === undefined && !f.skipped) {
+      pendingFollowUpIdx = i
+      break
+    }
+  }
 
   /* Keyboard-aware composer: the footer is pinned with `position: fixed` and
      offset by the on-screen keyboard's height (via VisualViewport) so it floats
@@ -107,12 +122,12 @@ export function ChatQuestions({ dept, answers, setAnswer, onBack, onDone }: Chat
 
   useEffect(() => {
     setDraft({ picks: [], text: '' })
-  }, [activeIdx])
+  }, [activeIdx, pendingFollowUpIdx])
 
   useEffect(() => {
     const el = scRef.current
     if (el) el.scrollTop = el.scrollHeight
-  }, [activeIdx, typing, answers, acknowledgements])
+  }, [activeIdx, typing, answers, acknowledgements, followUps])
 
   /* Tapping the chat (not the composer itself) dismisses the keyboard, matching
      standard chat-app tap-to-dismiss behaviour. */
@@ -124,7 +139,29 @@ export function ChatQuestions({ dept, answers, setAnswer, onBack, onDone }: Chat
   }
 
   const canSend = draft.picks.length > 0 || draft.text.trim().length > 0
+
+  /* Answering a follow-up never triggers a network call — it's folded into
+     priorTurns context for the NEXT fixed question's ack/follow-up call, but
+     doesn't itself spawn another decision (runaway chains are structurally
+     impossible). */
+  const sendFollowUp = () => {
+    if (!canSend || pendingFollowUpIdx == null) return
+    const idx = pendingFollowUpIdx
+    const answer = answerText({ picks: draft.picks, text: draft.text.trim() })
+    setFollowUps((prev) => ({ ...prev, [idx]: { ...prev[idx], answer } }))
+  }
+
+  const skipFollowUp = () => {
+    if (pendingFollowUpIdx == null) return
+    const idx = pendingFollowUpIdx
+    setFollowUps((prev) => ({ ...prev, [idx]: { ...prev[idx], skipped: true } }))
+  }
+
   const send = () => {
+    if (pendingFollowUpIdx != null) {
+      sendFollowUp()
+      return
+    }
     if (!canSend || activeIdx == null) return
     const answeredIdx = activeIdx
     const question = turns[answeredIdx].type === 'ask' ? turns[answeredIdx].q : ''
@@ -140,12 +177,27 @@ export function ChatQuestions({ dept, answers, setAnswer, onBack, onDone }: Chat
           say.push({ role: 'user', content: answerText(answers[i]) })
           const ack = acknowledgements[i]
           if (ack) say.push({ role: 'assistant', content: ack })
+          const f = followUps[i]
+          if (f?.question) {
+            say.push({ role: 'assistant', content: f.question })
+            if (f.answer) say.push({ role: 'user', content: f.answer })
+          }
         }
         return say
       })
 
-    void fetchCoachAcknowledgement(dept.id, question, userAnswer, priorTurns).then((text) => {
-      if (text) setAcknowledgements((prev) => ({ ...prev, [answeredIdx]: text }))
+    if (!canMakeLlmCall()) return
+    recordLlmCall()
+    void fetchCoachAcknowledgement(dept.id, question, userAnswer, priorTurns).then((res) => {
+      if (!res) return
+      setAcknowledgements((prev) => ({ ...prev, [answeredIdx]: res.acknowledgement }))
+      if (res.followUpQuestion) {
+        // Staleness guard: drop silently if the user has already moved past the
+        // point this follow-up would attach to (the next fixed question is answered).
+        const nextFixedIdx = turns.findIndex((t, i) => i > answeredIdx && t.type === 'ask')
+        if (nextFixedIdx !== -1 && answered(nextFixedIdx)) return
+        setFollowUps((prev) => ({ ...prev, [answeredIdx]: { question: res.followUpQuestion! } }))
+      }
     })
   }
 
@@ -184,11 +236,19 @@ export function ChatQuestions({ dept, answers, setAnswer, onBack, onDone }: Chat
         {visible.map((i) => {
           const t = turns[i]
           if (i === activeIdx && typing) return null
+          const followUp = followUps[i]
           return (
             <div key={i}>
               <CoachRow>{t.type === 'say' ? <SayContent t={t} /> : t.q}</CoachRow>
               {t.type === 'ask' && answered(i) && <UserRow>{answerText(answers[i])}</UserRow>}
               {t.type === 'ask' && answered(i) && acknowledgements[i] && <CoachRow>{acknowledgements[i]}</CoachRow>}
+              {followUp?.question && (
+                <>
+                  <CoachRow>{followUp.question}</CoachRow>
+                  {followUp.answer !== undefined && <UserRow>{followUp.answer}</UserRow>}
+                  {followUp.skipped && <UserRow>Skipped</UserRow>}
+                </>
+              )}
             </div>
           )
         })}
@@ -210,7 +270,30 @@ export function ChatQuestions({ dept, answers, setAnswer, onBack, onDone }: Chat
           background: '#0a0a0a',
         }}
       >
-        {allDone ? (
+        {pendingFollowUpIdx != null ? (
+          <>
+            <ChatInput draft={draft} setDraft={setDraft} canSend={canSend} send={send} onSuggest={onDone} suggestLabel={`Suggest actions to improve ${dept.label}`} />
+            <button
+              onClick={skipFollowUp}
+              style={{
+                marginTop: 8,
+                width: '100%',
+                textAlign: 'center',
+                cursor: 'pointer',
+                padding: '8px 12px',
+                borderRadius: 999,
+                background: 'transparent',
+                border: 'none',
+                color: 'var(--text-muted)',
+                fontFamily: 'var(--font-primary)',
+                fontSize: 13,
+                fontWeight: 500,
+              }}
+            >
+              Skip
+            </button>
+          </>
+        ) : allDone ? (
           <Button variant="primary" size="lg" fullWidth onClick={onDone}>
             Pick my action
           </Button>

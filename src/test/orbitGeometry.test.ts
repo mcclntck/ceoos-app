@@ -7,16 +7,18 @@ describe('orbit geometry constants', () => {
     expect(ORBIT_H).toBe(392)
     expect(CX).toBe(180)
     expect(CY).toBe(196)
-    expect(YOU_SIZE).toBe(104)
   })
 
-  it('has the four level geometries r/size/dim exactly as ceoos-orbit.jsx', () => {
+  /* Orb sizes were deliberately bumped ~1.22x from ceoos-orbit.jsx's originals (product
+     decision: the orbs read as too small) — see orbitGeometry.ts's ORBIT_LEVELS comment. */
+  it('has the four level geometries r/size/dim at the current bumped sizes', () => {
     expect(ORBIT_LEVELS).toEqual([
-      { r: 152, size: 64, dim: 0.62 },
-      { r: 140, size: 74, dim: 0.82 },
-      { r: 128, size: 84, dim: 1 },
-      { r: 116, size: 94, dim: 1 },
+      { r: 156, size: 78, dim: 0.62 },
+      { r: 144, size: 90, dim: 0.82 },
+      { r: 134, size: 102, dim: 1 },
+      { r: 124, size: 115, dim: 1 },
     ])
+    expect(YOU_SIZE).toBe(116)
   })
 
   it('radius shrinks and size grows monotonically as level increases (closer + bigger)', () => {
@@ -26,10 +28,16 @@ describe('orbit geometry constants', () => {
     }
   })
 
-  it('clearance between orb edge and hub edge stays positive at every level (68/51/34/17px)', () => {
+  it('clearance between orb edge and hub edge stays positive at every level', () => {
     const clearances = ORBIT_LEVELS.map((l) => l.r - l.size / 2 - YOU_SIZE / 2)
-    expect(clearances.map((c) => Math.round(c))).toEqual([68, 51, 34, 17])
+    expect(clearances.map((c) => Math.round(c))).toEqual([59, 41, 25, 9])
     clearances.forEach((c) => expect(c).toBeGreaterThan(0))
+  })
+
+  it('clearance between adjacent orbs (fixed 72deg apart) stays positive at every level', () => {
+    const theta = (72 * Math.PI) / 180
+    const gaps = ORBIT_LEVELS.map((l) => 2 * l.r * Math.sin(theta / 2) - l.size)
+    gaps.forEach((g) => expect(g).toBeGreaterThan(0))
   })
 })
 

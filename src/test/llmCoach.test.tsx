@@ -12,7 +12,7 @@ describe('ChatQuestions LLM acknowledgement', () => {
       'fetch',
       vi.fn(async () => ({
         ok: true,
-        json: async () => ({ text: 'That focus block sounds like a solid start.' }),
+        json: async () => ({ acknowledgement: 'That focus block sounds like a solid start.' }),
       })),
     )
   })
@@ -29,7 +29,15 @@ describe('ChatQuestions LLM acknowledgement', () => {
     })
 
     const { rerender } = render(
-      <ChatQuestions dept={sampleDept} answers={answers} setAnswer={setAnswer} onBack={() => {}} onDone={() => {}} />,
+      <ChatQuestions
+        dept={sampleDept}
+        answers={answers}
+        setAnswer={setAnswer}
+        onBack={() => {}}
+        onDone={() => {}}
+        canMakeLlmCall={() => true}
+        recordLlmCall={() => {}}
+      />,
     )
 
     act(() => {
@@ -46,7 +54,15 @@ describe('ChatQuestions LLM acknowledgement', () => {
     // Re-render with the answer applied (mirrors the parent DepartmentFlow re-rendering
     // ChatQuestions with the updated `answers` prop after setAnswer's state update).
     rerender(
-      <ChatQuestions dept={sampleDept} answers={answers} setAnswer={setAnswer} onBack={() => {}} onDone={() => {}} />,
+      <ChatQuestions
+        dept={sampleDept}
+        answers={answers}
+        setAnswer={setAnswer}
+        onBack={() => {}}
+        onDone={() => {}}
+        canMakeLlmCall={() => true}
+        recordLlmCall={() => {}}
+      />,
     )
 
     vi.useRealTimers()
@@ -81,7 +97,17 @@ describe('ChatQuestions LLM acknowledgement', () => {
       answers[i] = v
     })
 
-    render(<ChatQuestions dept={sampleDept} answers={answers} setAnswer={setAnswer} onBack={() => {}} onDone={() => {}} />)
+    render(
+      <ChatQuestions
+        dept={sampleDept}
+        answers={answers}
+        setAnswer={setAnswer}
+        onBack={() => {}}
+        onDone={() => {}}
+        canMakeLlmCall={() => true}
+        recordLlmCall={() => {}}
+      />,
+    )
     act(() => {
       vi.advanceTimersByTime(TYPING_DELAY_MS + 50)
     })
@@ -89,5 +115,36 @@ describe('ChatQuestions LLM acknowledgement', () => {
     fireEvent.change(textarea, { target: { value: 'fine' } })
     expect(() => fireEvent.click(screen.getByRole('button', { name: '' }))).not.toThrow()
     vi.useRealTimers()
+  })
+
+  it('does not fetch when the session LLM call cap has been reached', async () => {
+    vi.useFakeTimers()
+    const answers: Record<number, { picks?: string[]; text?: string }> = {}
+    const setAnswer = vi.fn((i: number, v: { picks?: string[]; text?: string }) => {
+      answers[i] = v
+    })
+    const recordLlmCall = vi.fn()
+
+    render(
+      <ChatQuestions
+        dept={sampleDept}
+        answers={answers}
+        setAnswer={setAnswer}
+        onBack={() => {}}
+        onDone={() => {}}
+        canMakeLlmCall={() => false}
+        recordLlmCall={recordLlmCall}
+      />,
+    )
+    act(() => {
+      vi.advanceTimersByTime(TYPING_DELAY_MS + 50)
+    })
+    const textarea = screen.getByPlaceholderText('Answer in your own words…') as HTMLTextAreaElement
+    fireEvent.change(textarea, { target: { value: 'capped' } })
+    fireEvent.click(screen.getByRole('button', { name: '' }))
+    vi.useRealTimers()
+
+    expect(recordLlmCall).not.toHaveBeenCalled()
+    expect(fetch).not.toHaveBeenCalled()
   })
 })

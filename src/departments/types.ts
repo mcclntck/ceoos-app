@@ -20,6 +20,11 @@ export interface DepartmentRuntime extends Department {
   level: 0 | 1 | 2 | 3
 }
 
+export interface ChatAnswer {
+  picks?: string[]
+  text?: string
+}
+
 export interface Conversation {
   id: string
   date: string
@@ -27,6 +32,11 @@ export interface Conversation {
   summary: string
   action: string
   mood: string | null
+  /** 'in-progress' for a resumable draft chat, 'done' once completed. Missing/older
+   *  persisted data with no status is treated as 'done' — see conversationsStore. */
+  status?: 'in-progress' | 'done'
+  /** Saved answers for a resumable draft — only present while status is 'in-progress'. */
+  answers?: Record<number, ChatAnswer>
 }
 
 export interface Plan {

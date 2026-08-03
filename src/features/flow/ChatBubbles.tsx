@@ -16,6 +16,15 @@ export interface ChatTurnAsk {
 
 export type ChatTurn = ChatTurnSay | ChatTurnAsk
 
+/** Ephemeral, per-session follow-up question layered on top of a fixed question's
+ *  turn index — not part of the persisted Conversation/Department domain model,
+ *  and never saved to conversationsStore (see plan's "follow-ups are not persisted"). */
+export interface FollowUp {
+  question: string
+  answer?: string
+  skipped?: boolean
+}
+
 export function CoachRow({ children }: { children: ReactNode }) {
   return (
     <div

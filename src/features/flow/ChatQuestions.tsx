@@ -160,8 +160,12 @@ export function ChatQuestions({
     const text = draft.text.trim()
 
     // Optimistic render: the message appears immediately, before we know if it's
-    // an answer or a side-question.
+    // an answer or a side-question. Clear the composer right away too — if this
+    // turns out to be a side-question, activeIdx never changes, so the draft-clear
+    // effect keyed on activeIdx below would never fire and the sent text would
+    // linger in the textarea.
     setPendingMessage(userMessage)
+    setDraft({ picks: [], text: '' })
 
     const priorTurns: AcknowledgementTurn[] = visible
       .filter((i) => i < answeredIdx)

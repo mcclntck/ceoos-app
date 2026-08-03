@@ -151,8 +151,11 @@ describe('ChatQuestions LLM acknowledgement', () => {
     await waitFor(() => {
       expect(screen.getByText('Great question — a score just means where you feel you are today.')).toBeTruthy()
     })
-    // The fixed question is still visible/answerable — the composer is still up.
-    expect(screen.getByPlaceholderText('Answer in your own words…')).toBeTruthy()
+    // The fixed question is still visible/answerable — the composer is still up,
+    // and cleared (activeIdx never changed, so the composer must be cleared
+    // eagerly in send() rather than relying on the activeIdx-keyed effect).
+    const composer = screen.getByPlaceholderText('Answer in your own words…') as HTMLTextAreaElement
+    expect(composer.value).toBe('')
 
     // Bubble placement must not be swapped: the user's own question renders as a
     // right-aligned UserRow, and the coach's reply renders as a left-aligned

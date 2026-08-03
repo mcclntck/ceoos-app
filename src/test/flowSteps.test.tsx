@@ -61,6 +61,8 @@ describe('ChatQuestions', () => {
           dept={sampleDept}
           answers={answers}
           setAnswer={setAnswer}
+          exchanges={{}}
+          appendExchange={() => {}}
           onBack={() => {}}
           onDone={() => {}}
           canMakeLlmCall={() => false}

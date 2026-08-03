@@ -3,12 +3,12 @@ import type Anthropic from '@anthropic-ai/sdk'
 import { buildDepartmentSystemPrompt } from './_lib/prompts'
 import { getAnthropicClient } from './_lib/anthropicClient'
 
-/* LLM-powered coach acknowledgement + optional follow-up question — see plan
-   §"LLM integration: natural follow-up questions". Scoped narrowly: a 1-2
-   sentence in-persona reaction to the user's answer, with an OPTIONAL single
-   natural follow-up question the model includes only when an answer is
-   genuinely worth probing — inserted before the next FIXED question in
-   ChatQuestions.tsx, never replacing it. Not a free-form chat backend.
+/* LLM-powered coach turn — see plan §"Let the user ask the coach questions
+   mid-chat". Every user message on a fixed question is classified by the
+   model as either an answer (today's existing acknowledgement + optional
+   follow-up question) or a genuine question directed at the coach (answered
+   in-persona, then the app re-shows the same fixed question — never
+   replacing the fixed 6-question backbone). Not a free-form chat backend.
    ANTHROPIC_API_KEY is a Netlify server env var only, never VITE_-prefixed,
    so it can never be inlined into the client bundle. */
 
@@ -18,7 +18,7 @@ type DeptId = (typeof DEPT_IDS)[number]
 interface ChatRequestBody {
   deptId: DeptId
   question: string
-  userAnswer: string
+  userMessage: string
   priorTurns?: { role: 'user' | 'assistant'; content: string }[]
 }
 
@@ -29,33 +29,47 @@ function isValidBody(body: unknown): body is ChatRequestBody {
     typeof b.deptId === 'string' &&
     (DEPT_IDS as readonly string[]).includes(b.deptId) &&
     typeof b.question === 'string' &&
-    typeof b.userAnswer === 'string'
+    typeof b.userMessage === 'string'
   )
 }
 
 const RESPOND_TOOL: Anthropic.Tool = {
-  name: 'respond_to_answer',
-  description: "Return your in-persona reaction to the user's answer, and optionally one natural follow-up question.",
+  name: 'respond_to_message',
+  description:
+    "Classify the user's message as an answer or a question, then respond accordingly.",
   input_schema: {
     type: 'object',
     properties: {
+      kind: {
+        type: 'string',
+        enum: ['answer', 'question'],
+        description:
+          '"answer" if the user answered (even briefly/vaguely) the question asked. "question" if they instead asked YOU something rather than answering.',
+      },
       acknowledgement: {
         type: 'string',
-        description: '1-2 short sentences, in persona, reacting to what the user said.',
+        description: 'When kind is "answer": 1-2 short sentences, in persona, reacting to what the user said.',
       },
       follow_up_question: {
         type: 'string',
         description:
-          'ONE natural, in-persona follow-up question probing something specific, surprising, or incomplete in their answer. Omit this field entirely if no follow-up is warranted (which should be the common case).',
+          'When kind is "answer": ONE natural, in-persona follow-up question probing something specific, surprising, or incomplete in their answer. Omit this field entirely if no follow-up is warranted (which should be the common case).',
+      },
+      answer_to_user: {
+        type: 'string',
+        description:
+          'When kind is "question": your genuinely helpful, in-persona answer to what they asked, grounded in this Dept and the conversation so far.',
       },
     },
-    required: ['acknowledgement'],
+    required: ['kind'],
   },
 }
 
-interface RespondToAnswerInput {
+interface RespondToMessageInput {
+  kind?: unknown
   acknowledgement?: unknown
   follow_up_question?: unknown
+  answer_to_user?: unknown
 }
 
 export const handler: Handler = async (event) => {
@@ -71,7 +85,7 @@ export const handler: Handler = async (event) => {
   }
 
   if (!isValidBody(body)) {
-    return { statusCode: 400, body: 'Missing or invalid deptId/question/userAnswer' }
+    return { statusCode: 400, body: 'Missing or invalid deptId/question/userMessage' }
   }
 
   const client = getAnthropicClient()
@@ -85,40 +99,49 @@ export const handler: Handler = async (event) => {
   try {
     const response = await client.messages.create({
       model: 'claude-haiku-4-5',
-      max_tokens: 300,
+      max_tokens: 500,
       system: buildDepartmentSystemPrompt(body.deptId),
       tools: [RESPOND_TOOL],
-      tool_choice: { type: 'tool', name: 'respond_to_answer' },
+      tool_choice: { type: 'tool', name: 'respond_to_message' },
       messages: [
         ...priorTurns.map((t) => ({ role: t.role, content: t.content })),
         {
           role: 'user' as const,
-          content: `Question asked: "${body.question}"\nUser's answer: "${body.userAnswer}"`,
+          content: `Question asked: "${body.question}"\nUser's message: "${body.userMessage}"`,
         },
       ],
     })
 
-    const toolUseBlock = response.content.find((b) => b.type === 'tool_use' && b.name === 'respond_to_answer')
+    const toolUseBlock = response.content.find((b) => b.type === 'tool_use' && b.name === 'respond_to_message')
 
+    let kind: 'answer' | 'question' = 'answer'
     let acknowledgement = ''
     let followUpQuestion: string | undefined
+    let answerToUser: string | undefined
 
     if (toolUseBlock && toolUseBlock.type === 'tool_use') {
       try {
-        const input = toolUseBlock.input as RespondToAnswerInput
+        const input = toolUseBlock.input as RespondToMessageInput
+        kind = input.kind === 'question' ? 'question' : 'answer'
         acknowledgement = typeof input.acknowledgement === 'string' ? input.acknowledgement.trim() : ''
-        followUpQuestion = typeof input.follow_up_question === 'string' ? input.follow_up_question.trim() : undefined
-        if (!followUpQuestion) followUpQuestion = undefined
+        followUpQuestion = typeof input.follow_up_question === 'string' ? input.follow_up_question.trim() || undefined : undefined
+        answerToUser = typeof input.answer_to_user === 'string' ? input.answer_to_user.trim() || undefined : undefined
       } catch {
+        kind = 'answer'
         acknowledgement = ''
         followUpQuestion = undefined
+        answerToUser = undefined
       }
     }
+
+    // A "question" classification with no usable answer degrades to the fail-open
+    // "answer" path client-side (see llmCoach.ts) rather than leaving the user stuck.
+    if (kind === 'question' && !answerToUser) kind = 'answer'
 
     return {
       statusCode: 200,
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ acknowledgement, followUpQuestion }),
+      body: JSON.stringify({ kind, acknowledgement, followUpQuestion, answerToUser }),
     }
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'

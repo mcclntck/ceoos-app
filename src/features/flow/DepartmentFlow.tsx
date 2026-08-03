@@ -37,6 +37,7 @@ import { FlowHeader } from './FlowHeader'
 import { Button } from '@/design-system'
 import { fetchSuggestedActions } from './llmCoach'
 import { answerText } from './ChatQuestions'
+import type { Exchange } from './ChatBubbles'
 
 const F_EYEBROW: React.CSSProperties = {
   fontFamily: 'var(--font-primary)',
@@ -122,6 +123,13 @@ export function DepartmentFlow({
   const [step, setStep] = useState<FlowStep>(entry?.done ? 'completed' : entry?.step || 'intro')
   const [chat, setChat] = useState<Record<number, ChatAnswer>>(entry?.answers ?? {})
   const setChatAns = (i: number, v: ChatAnswer) => setChat((c) => ({ ...c, [i]: v }))
+  /* Ordered side-exchanges (coach follow-ups + user side-questions) per fixed
+     question index — lifted up from ChatQuestions (rather than owned locally
+     there) so the /actions transcript builder below can fold them in. Not
+     persisted to conversationsStore (deliberate scope cut, same as answers'
+     resumable-draft feature not covering this either — see ChatBubbles.tsx). */
+  const [exchanges, setExchanges] = useState<Record<number, Exchange[]>>({})
+  const appendExchange = (i: number, exchange: Exchange) => setExchanges((e) => ({ ...e, [i]: [...(e[i] ?? []), exchange] }))
   /* Stable id for this chat session — reused from a resumed draft (entry.conversationId)
      or generated the first time an answer is saved. Kept in a ref (not state) since it
      never needs to trigger a re-render on its own; onSaveDraft/onComplete just read it. */
@@ -208,8 +216,17 @@ export function DepartmentFlow({
     if (!canMakeLlmCall()) return
     recordLlmCall()
 
+    // Turn 0 is buildTurns' fixed intro "say" line, so dept.questions[i] lives at
+    // turn index i + 1 in `chat`/`exchanges` — see ChatQuestions.tsx's buildTurns.
     const transcript = dept.questions
-      .map((q, i) => ({ question: q.q, answer: answerText(chat[i]) }))
+      .map((q, i) => {
+        const turnIdx = i + 1
+        const parts = [answerText(chat[turnIdx])]
+        for (const ex of exchanges[turnIdx] ?? []) {
+          if (ex.kind === 'user_question') parts.push(`(user also asked: "${ex.question}" — coach answered: "${ex.answer}")`)
+        }
+        return { question: q.q, answer: parts.filter(Boolean).join(' ') }
+      })
       .filter((t) => t.answer.trim().length > 0)
     if (transcript.length === 0) return
 
@@ -253,6 +270,8 @@ export function DepartmentFlow({
         dept={dept}
         answers={chat}
         setAnswer={setChatAns}
+        exchanges={exchanges}
+        appendExchange={appendExchange}
         onBack={() => setStep('intro')}
         onDone={() => setStep('action')}
         canMakeLlmCall={canMakeLlmCall}

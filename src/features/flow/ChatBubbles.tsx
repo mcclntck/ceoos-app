@@ -16,14 +16,28 @@ export interface ChatTurnAsk {
 
 export type ChatTurn = ChatTurnSay | ChatTurnAsk
 
-/** Ephemeral, per-session follow-up question layered on top of a fixed question's
- *  turn index — not part of the persisted Conversation/Department domain model,
- *  and never saved to conversationsStore (see plan's "follow-ups are not persisted"). */
-export interface FollowUp {
+/** Ephemeral, per-session side-exchanges layered on top of a fixed question's turn
+ *  index, in chronological order — not part of the persisted Conversation/Department
+ *  domain model, and never saved to conversationsStore (deliberate scope cut, same
+ *  as the original follow-up feature). Two kinds:
+ *  - coach_followup: the model chose to probe the user's answer further. Purely a
+ *    remark shown to the user — whatever they type next is classified fresh against
+ *    the ORIGINAL fixed question (see ChatQuestions.send()), so this has no separate
+ *    "answer" of its own to track.
+ *  - user_question: the user asked the coach something instead of answering, and
+ *    got an in-persona answer, before the fixed question was actually answered. */
+export interface CoachFollowUp {
+  kind: 'coach_followup'
   question: string
-  answer?: string
-  skipped?: boolean
 }
+
+export interface UserQuestion {
+  kind: 'user_question'
+  question: string
+  answer: string
+}
+
+export type Exchange = CoachFollowUp | UserQuestion
 
 export function CoachRow({ children }: { children: ReactNode }) {
   return (

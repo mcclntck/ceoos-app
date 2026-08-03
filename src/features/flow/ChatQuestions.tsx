@@ -13,7 +13,7 @@ import { Button } from '@/design-system'
 import type { DepartmentRuntime, ChatAnswer } from '@/departments/types'
 import { FlowHeader } from './FlowHeader'
 import { CoachRow, UserRow, SayContent, TypingDots, CHAT_BUBBLE_KEYFRAMES } from './ChatBubbles'
-import type { ChatTurn, FollowUp } from './ChatBubbles'
+import type { ChatTurn, Exchange } from './ChatBubbles'
 import { ChatInput } from './ChatInput'
 import type { ChatDraft } from './ChatInput'
 import { fetchCoachAcknowledgement } from './llmCoach'
@@ -42,6 +42,11 @@ export interface ChatQuestionsProps {
   dept: DepartmentRuntime
   answers: Record<number, ChatAnswer>
   setAnswer: (index: number, value: ChatAnswer) => void
+  /** Ordered side-exchanges (coach follow-ups and user side-questions) per fixed
+   *  turn index, keyed the same way as `answers` — lifted up to DepartmentFlow so
+   *  it can fold them into the /actions transcript. Controlled, like `answers`. */
+  exchanges: Record<number, Exchange[]>
+  appendExchange: (index: number, exchange: Exchange) => void
   onBack: () => void
   onDone: () => void
   /** Session-wide LLM call budget, owned by DepartmentFlow — see its
@@ -51,7 +56,17 @@ export interface ChatQuestionsProps {
   recordLlmCall: () => void
 }
 
-export function ChatQuestions({ dept, answers, setAnswer, onBack, onDone, canMakeLlmCall, recordLlmCall }: ChatQuestionsProps) {
+export function ChatQuestions({
+  dept,
+  answers,
+  setAnswer,
+  exchanges,
+  appendExchange,
+  onBack,
+  onDone,
+  canMakeLlmCall,
+  recordLlmCall,
+}: ChatQuestionsProps) {
   const turns = useMemo(() => buildTurns(dept), [dept])
 
   const answered = (i: number): boolean => {
@@ -79,21 +94,22 @@ export function ChatQuestions({ dept, answers, setAnswer, onBack, onDone, canMak
   /* LLM-generated acknowledgements, keyed by the turn index they follow.
      Populated after the real network call resolves — see send() below. */
   const [acknowledgements, setAcknowledgements] = useState<Record<number, string>>({})
-  /* Ephemeral follow-up questions, keyed by the fixed turn index they follow —
-     layered on top of the fixed 6-question backbone, never touching turns/
-     activeIdx/answered(). Not persisted (see plan's accepted scope cut). */
-  const [followUps, setFollowUps] = useState<Record<number, FollowUp>>({})
+  /* The user's just-sent message, shown optimistically as a UserRow before we know
+     whether the /chat call will classify it as an answer or a side-question — see
+     send() below. Cleared once the response resolves (folded into either `answers`
+     or `exchanges` by then), or immediately for the fail-open path. */
+  const [pendingMessage, setPendingMessage] = useState<string | null>(null)
 
-  /* First visible turn with a follow-up question still awaiting an answer/skip.
-     When set, the composer targets the follow-up instead of the next fixed question. */
-  let pendingFollowUpIdx: number | null = null
-  for (const i of visible) {
-    const f = followUps[i]
-    if (f && f.question && f.answer === undefined && !f.skipped) {
-      pendingFollowUpIdx = i
-      break
-    }
-  }
+  useLayoutEffect(() => {
+    const el = footerRef.current
+    if (!el) return
+    setFooterHeight(el.offsetHeight)
+    if (typeof ResizeObserver === 'undefined') return
+    const ro = new ResizeObserver(() => setFooterHeight(el.offsetHeight))
+    ro.observe(el)
+    return () => ro.disconnect()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allDone, typing])
 
   /* Keyboard-aware composer: the footer is pinned with `position: fixed` and
      offset by the on-screen keyboard's height (via VisualViewport) so it floats
@@ -104,16 +120,6 @@ export function ChatQuestions({ dept, answers, setAnswer, onBack, onDone, canMak
   const footerRef = useRef<HTMLDivElement | null>(null)
   const [footerHeight, setFooterHeight] = useState(0)
 
-  useLayoutEffect(() => {
-    const el = footerRef.current
-    if (!el) return
-    setFooterHeight(el.offsetHeight)
-    if (typeof ResizeObserver === 'undefined') return
-    const ro = new ResizeObserver(() => setFooterHeight(el.offsetHeight))
-    ro.observe(el)
-    return () => ro.disconnect()
-  }, [allDone, typing])
-
   useEffect(() => {
     setTyping(true)
     const t = setTimeout(() => setTyping(false), TYPING_DELAY_MS)
@@ -122,12 +128,12 @@ export function ChatQuestions({ dept, answers, setAnswer, onBack, onDone, canMak
 
   useEffect(() => {
     setDraft({ picks: [], text: '' })
-  }, [activeIdx, pendingFollowUpIdx])
+  }, [activeIdx])
 
   useEffect(() => {
     const el = scRef.current
     if (el) el.scrollTop = el.scrollHeight
-  }, [activeIdx, typing, answers, acknowledgements, followUps])
+  }, [activeIdx, typing, answers, acknowledgements, exchanges, pendingMessage])
 
   /* Tapping the chat (not the composer itself) dismisses the keyboard, matching
      standard chat-app tap-to-dismiss behaviour. */
@@ -140,33 +146,22 @@ export function ChatQuestions({ dept, answers, setAnswer, onBack, onDone, canMak
 
   const canSend = draft.picks.length > 0 || draft.text.trim().length > 0
 
-  /* Answering a follow-up never triggers a network call — it's folded into
-     priorTurns context for the NEXT fixed question's ack/follow-up call, but
-     doesn't itself spawn another decision (runaway chains are structurally
-     impossible). */
-  const sendFollowUp = () => {
-    if (!canSend || pendingFollowUpIdx == null) return
-    const idx = pendingFollowUpIdx
-    const answer = answerText({ picks: draft.picks, text: draft.text.trim() })
-    setFollowUps((prev) => ({ ...prev, [idx]: { ...prev[idx], answer } }))
-  }
-
-  const skipFollowUp = () => {
-    if (pendingFollowUpIdx == null) return
-    const idx = pendingFollowUpIdx
-    setFollowUps((prev) => ({ ...prev, [idx]: { ...prev[idx], skipped: true } }))
-  }
-
+  /* Every message on the current fixed question — whether a real answer or a
+     side-question to the coach — goes through this single send path. The
+     composer never mode-switches: it always targets `activeIdx`'s fixed
+     question, and the /chat response's "kind" decides what happens to the
+     message after the fact (see plan §"Why no new pending state is needed"). */
   const send = () => {
-    if (pendingFollowUpIdx != null) {
-      sendFollowUp()
-      return
-    }
     if (!canSend || activeIdx == null) return
     const answeredIdx = activeIdx
     const question = turns[answeredIdx].type === 'ask' ? turns[answeredIdx].q : ''
-    const userAnswer = answerText({ picks: draft.picks, text: draft.text.trim() })
-    setAnswer(answeredIdx, { picks: draft.picks, text: draft.text.trim() })
+    const userMessage = answerText({ picks: draft.picks, text: draft.text.trim() })
+    const picks = draft.picks
+    const text = draft.text.trim()
+
+    // Optimistic render: the message appears immediately, before we know if it's
+    // an answer or a side-question.
+    setPendingMessage(userMessage)
 
     const priorTurns: AcknowledgementTurn[] = visible
       .filter((i) => i < answeredIdx)
@@ -177,26 +172,60 @@ export function ChatQuestions({ dept, answers, setAnswer, onBack, onDone, canMak
           say.push({ role: 'user', content: answerText(answers[i]) })
           const ack = acknowledgements[i]
           if (ack) say.push({ role: 'assistant', content: ack })
-          const f = followUps[i]
-          if (f?.question) {
-            say.push({ role: 'assistant', content: f.question })
-            if (f.answer) say.push({ role: 'user', content: f.answer })
+          for (const ex of exchanges[i] ?? []) {
+            if (ex.kind === 'coach_followup') {
+              say.push({ role: 'assistant', content: ex.question })
+            } else {
+              say.push({ role: 'user', content: ex.question })
+              say.push({ role: 'assistant', content: ex.answer })
+            }
           }
         }
         return say
       })
+    // Side-questions already asked (and answered) on THIS same fixed question,
+    // so the model has context for a follow-up question that's really a second question.
+    for (const ex of exchanges[answeredIdx] ?? []) {
+      if (ex.kind === 'coach_followup') {
+        priorTurns.push({ role: 'assistant', content: ex.question })
+      } else {
+        priorTurns.push({ role: 'user', content: ex.question })
+        priorTurns.push({ role: 'assistant', content: ex.answer })
+      }
+    }
 
-    if (!canMakeLlmCall()) return
+    const takeAsAnswer = () => {
+      setAnswer(answeredIdx, { picks, text })
+      setPendingMessage(null)
+    }
+
+    if (!canMakeLlmCall()) {
+      // Fail-open: no LLM available to classify, so treat the message at face
+      // value as the answer — never leave the user stuck mid-conversation.
+      takeAsAnswer()
+      return
+    }
     recordLlmCall()
-    void fetchCoachAcknowledgement(dept.id, question, userAnswer, priorTurns).then((res) => {
-      if (!res) return
+    void fetchCoachAcknowledgement(dept.id, question, userMessage, priorTurns).then((res) => {
+      if (!res) {
+        // Call failed — same fail-open behaviour as the capped-out path above.
+        takeAsAnswer()
+        return
+      }
+      if (res.kind === 'question') {
+        appendExchange(answeredIdx, { kind: 'user_question', question: userMessage, answer: res.answerToUser })
+        setPendingMessage(null)
+        return
+      }
+      setAnswer(answeredIdx, { picks, text })
+      setPendingMessage(null)
       setAcknowledgements((prev) => ({ ...prev, [answeredIdx]: res.acknowledgement }))
       if (res.followUpQuestion) {
         // Staleness guard: drop silently if the user has already moved past the
         // point this follow-up would attach to (the next fixed question is answered).
         const nextFixedIdx = turns.findIndex((t, i) => i > answeredIdx && t.type === 'ask')
         if (nextFixedIdx !== -1 && answered(nextFixedIdx)) return
-        setFollowUps((prev) => ({ ...prev, [answeredIdx]: { question: res.followUpQuestion! } }))
+        appendExchange(answeredIdx, { kind: 'coach_followup', question: res.followUpQuestion })
       }
     })
   }
@@ -236,19 +265,18 @@ export function ChatQuestions({ dept, answers, setAnswer, onBack, onDone, canMak
         {visible.map((i) => {
           const t = turns[i]
           if (i === activeIdx && typing) return null
-          const followUp = followUps[i]
           return (
             <div key={i}>
               <CoachRow>{t.type === 'say' ? <SayContent t={t} /> : t.q}</CoachRow>
               {t.type === 'ask' && answered(i) && <UserRow>{answerText(answers[i])}</UserRow>}
               {t.type === 'ask' && answered(i) && acknowledgements[i] && <CoachRow>{acknowledgements[i]}</CoachRow>}
-              {followUp?.question && (
-                <>
-                  <CoachRow>{followUp.question}</CoachRow>
-                  {followUp.answer !== undefined && <UserRow>{followUp.answer}</UserRow>}
-                  {followUp.skipped && <UserRow>Skipped</UserRow>}
-                </>
-              )}
+              {(exchanges[i] ?? []).map((ex, exIdx) => (
+                <div key={exIdx}>
+                  <CoachRow>{ex.question}</CoachRow>
+                  {ex.kind === 'user_question' && <UserRow>{ex.answer}</UserRow>}
+                </div>
+              ))}
+              {i === activeIdx && pendingMessage != null && <UserRow>{pendingMessage}</UserRow>}
             </div>
           )
         })}
@@ -270,30 +298,7 @@ export function ChatQuestions({ dept, answers, setAnswer, onBack, onDone, canMak
           background: '#0a0a0a',
         }}
       >
-        {pendingFollowUpIdx != null ? (
-          <>
-            <ChatInput draft={draft} setDraft={setDraft} canSend={canSend} send={send} onSuggest={onDone} suggestLabel={`Suggest actions to improve ${dept.label}`} />
-            <button
-              onClick={skipFollowUp}
-              style={{
-                marginTop: 8,
-                width: '100%',
-                textAlign: 'center',
-                cursor: 'pointer',
-                padding: '8px 12px',
-                borderRadius: 999,
-                background: 'transparent',
-                border: 'none',
-                color: 'var(--text-muted)',
-                fontFamily: 'var(--font-primary)',
-                fontSize: 13,
-                fontWeight: 500,
-              }}
-            >
-              Skip
-            </button>
-          </>
-        ) : allDone ? (
+        {allDone ? (
           <Button variant="primary" size="lg" fullWidth onClick={onDone}>
             Pick my action
           </Button>

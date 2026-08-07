@@ -1,3 +1,5 @@
+import type { Exchange } from '../features/flow/exchange'
+
 export type DeptId = 'career' | 'health' | 'wealth' | 'fun' | 'love'
 export type Glow = 'teal' | 'emerald' | 'cool' | 'violet' | 'warm'
 
@@ -37,6 +39,12 @@ export interface Conversation {
   status?: 'in-progress' | 'done'
   /** Saved answers for a resumable draft — only present while status is 'in-progress'. */
   answers?: Record<number, ChatAnswer>
+  /** Saved chat transcript (follow-ups, side-questions, and each answer's own
+   *  acknowledgement) for a resumable draft — only present while status is
+   *  'in-progress'. Without this, resuming a draft would restore which questions
+   *  are answered but show an empty transcript, since answers[] alone is never
+   *  itself rendered as a chat bubble — see ChatQuestions.tsx. */
+  exchanges?: Record<number, Exchange[]>
 }
 
 export interface Plan {

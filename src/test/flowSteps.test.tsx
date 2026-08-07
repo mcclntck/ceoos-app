@@ -45,6 +45,31 @@ describe('DepartmentFlow', () => {
     expect(screen.getByText('You followed through on this one.')).toBeTruthy()
     expect(screen.getByText('Block 90 minutes of deep-focus time')).toBeTruthy()
   })
+
+  it('resuming a draft chat (entry.step "q" with saved answers/exchanges) restores the full transcript, not just which questions are answered', () => {
+    // Regression: DepartmentFlow's `exchanges` state used to always start at {}
+    // regardless of `entry`, even though `answers` was correctly seeded from
+    // entry.answers — so a resumed draft skipped past already-answered questions
+    // correctly (answers survived) but showed an empty transcript for them
+    // (exchanges, the only thing ChatQuestions renders as bubbles, didn't).
+    render(
+      <DepartmentFlow
+        dept={sampleDept}
+        moods={CEOOS_MOODS}
+        onBack={() => {}}
+        onComplete={() => {}}
+        entry={{
+          step: 'q',
+          conversationId: 'c-career-resume-test',
+          answers: { 1: { picks: [], text: '7 out of 10' } },
+          exchanges: { 1: [{ kind: 'final_answer', answer: '7 out of 10', acknowledgement: 'A solid seven.' }] },
+        }}
+      />,
+    )
+
+    expect(screen.getByText('7 out of 10')).toBeTruthy()
+    expect(screen.getByText('A solid seven.')).toBeTruthy()
+  })
 })
 
 describe('ChatQuestions', () => {

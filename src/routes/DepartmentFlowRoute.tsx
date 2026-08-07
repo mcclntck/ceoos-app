@@ -10,6 +10,7 @@ import { usePlans } from '@/state/plansStore'
 import { useConversations } from '@/state/conversationsStore'
 import { CEOOS_MOODS } from '@/departments/departments.config'
 import type { ChatAnswer, DeptId, Plan } from '@/departments/types'
+import type { Exchange } from '@/features/flow/ChatBubbles'
 
 interface FlowLocationState {
   planIndex?: number
@@ -43,7 +44,12 @@ export function DepartmentFlowRoute() {
     .filter(({ plan }) => plan.deptId === dept.id && !plan.done)
 
   const entry = resumeConversation
-    ? { step: 'q' as const, conversationId: resumeConversation.id, answers: resumeConversation.answers ?? {} }
+    ? {
+        step: 'q' as const,
+        conversationId: resumeConversation.id,
+        answers: resumeConversation.answers ?? {},
+        exchanges: resumeConversation.exchanges ?? {},
+      }
     : plan
       ? { step: 'did' as const, done: plan.done, action: plan.action, dayLabel: plan.dayLabel, timeLabel: plan.timeLabel, planIndex: planIndex! }
       : null
@@ -71,7 +77,7 @@ export function DepartmentFlowRoute() {
         navigate(`/departments/${dept.id}/flow`, { state: { conversationId } })
       }}
       onAddAction={() => navigate('/actions')}
-      onSaveDraft={(draftDeptId, conversationId, answers: Record<number, ChatAnswer>) => {
+      onSaveDraft={(draftDeptId, conversationId, answers: Record<number, ChatAnswer>, exchanges: Record<number, Exchange[]>) => {
         const answeredCount = Object.values(answers).filter(
           (a) => (a.picks && a.picks.length) || (a.text && a.text.trim()),
         ).length
@@ -84,6 +90,7 @@ export function DepartmentFlowRoute() {
           mood: null,
           status: 'in-progress',
           answers,
+          exchanges,
         })
       }}
       onSavePlan={(_saveDeptId, plan, existingIndex) => {

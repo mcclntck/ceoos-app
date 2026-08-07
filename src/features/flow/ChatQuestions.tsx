@@ -12,7 +12,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Button } from '@/design-system'
 import type { DepartmentRuntime, ChatAnswer } from '@/departments/types'
 import { FlowHeader } from './FlowHeader'
-import { CoachRow, UserRow, SayContent, TypingDots, CHAT_BUBBLE_KEYFRAMES } from './ChatBubbles'
+import { CoachGroup, UserGroup, TypingDots, CHAT_BUBBLE_KEYFRAMES } from './ChatBubbles'
 import type { ChatTurn, Exchange } from './ChatBubbles'
 import { ChatInput } from './ChatInput'
 import type { ChatDraft } from './ChatInput'
@@ -224,6 +224,56 @@ export function ChatQuestions({
     })
   }
 
+  /* Flatten the whole transcript into one ordered { sender, content } list, then
+     group consecutive same-sender items so only one avatar renders per run
+     (see ChatBubbles.tsx's CoachGroup/UserGroup) — a plain rendering concern,
+     entirely separate from the exchanges data model above. */
+  type FlatMessage = { sender: 'coach' | 'user'; content: React.ReactNode }
+  const flat: FlatMessage[] = []
+  for (const i of visible) {
+    const t = turns[i]
+    if (i === activeIdx && typing) continue
+    flat.push({ sender: 'coach', content: t.type === 'say' ? t.text : t.q })
+    // exchanges[i] is the single chronological record of everything that happened
+    // on this turn — the final answer's own message is just one more entry in
+    // it, in the position it actually occurred (see send()).
+    for (const ex of exchanges[i] ?? []) {
+      if (ex.kind === 'coach_followup') {
+        flat.push({ sender: 'coach', content: ex.question })
+      } else if (ex.kind === 'user_question') {
+        flat.push({ sender: 'user', content: ex.question })
+        flat.push({ sender: 'coach', content: ex.answer })
+      } else {
+        flat.push({ sender: 'user', content: ex.answer })
+        if (ex.acknowledgement) flat.push({ sender: 'coach', content: ex.acknowledgement })
+      }
+    }
+    if (i === activeIdx && pendingMessage != null) flat.push({ sender: 'user', content: pendingMessage })
+  }
+  if (typing && active) flat.push({ sender: 'coach', content: <TypingDots /> })
+  // Chat keeps working after the last question — this is just a tappable prompt
+  // in the transcript, not a screen swap. The composer stays live below the
+  // whole time so the user can keep talking instead of acting on it.
+  if (allDone && !typing) {
+    flat.push({
+      sender: 'coach',
+      content: (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'flex-start' }}>
+          <span>Whenever you&rsquo;re ready, let&rsquo;s turn this into one thing you&rsquo;ll actually do.</span>
+          <Button variant="primary" size="sm" onClick={onDone}>
+            Pick my action
+          </Button>
+        </div>
+      ),
+    })
+  }
+  const messageGroups: { sender: 'coach' | 'user'; items: React.ReactNode[] }[] = []
+  for (const m of flat) {
+    const lastGroup = messageGroups[messageGroups.length - 1]
+    if (lastGroup && lastGroup.sender === m.sender) lastGroup.items.push(m.content)
+    else messageGroups.push({ sender: m.sender, items: [m.content] })
+  }
+
   return (
     <>
       <FlowHeader
@@ -256,53 +306,12 @@ export function ChatQuestions({
           WebkitOverflowScrolling: 'touch',
         }}
       >
-        {visible.map((i) => {
-          const t = turns[i]
-          if (i === activeIdx && typing) return null
-          return (
-            <div key={i}>
-              <CoachRow>{t.type === 'say' ? <SayContent t={t} /> : t.q}</CoachRow>
-              {/* exchanges[i] is the single chronological record of everything that
-                  happened on this turn — the final answer's own row is just one more
-                  entry in it, in the position it actually occurred (see send()). */}
-              {(exchanges[i] ?? []).map((ex, exIdx) => (
-                <div key={exIdx}>
-                  {ex.kind === 'coach_followup' && <CoachRow>{ex.question}</CoachRow>}
-                  {ex.kind === 'user_question' && (
-                    <>
-                      <UserRow>{ex.question}</UserRow>
-                      <CoachRow>{ex.answer}</CoachRow>
-                    </>
-                  )}
-                  {ex.kind === 'final_answer' && (
-                    <>
-                      <UserRow>{ex.answer}</UserRow>
-                      {ex.acknowledgement && <CoachRow>{ex.acknowledgement}</CoachRow>}
-                    </>
-                  )}
-                </div>
-              ))}
-              {i === activeIdx && pendingMessage != null && <UserRow>{pendingMessage}</UserRow>}
-            </div>
-          )
-        })}
-        {typing && active && (
-          <CoachRow>
-            <TypingDots />
-          </CoachRow>
-        )}
-        {/* Chat keeps working after the last question — this is just a tappable
-            prompt in the transcript, not a screen swap. The composer below stays
-            live the whole time so the user can keep talking instead of acting on it. */}
-        {allDone && !typing && (
-          <CoachRow>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'flex-start' }}>
-              <span>Whenever you&rsquo;re ready, let&rsquo;s turn this into one thing you&rsquo;ll actually do.</span>
-              <Button variant="primary" size="sm" onClick={onDone}>
-                Pick my action
-              </Button>
-            </div>
-          </CoachRow>
+        {messageGroups.map((group, gi) =>
+          group.sender === 'coach' ? (
+            <CoachGroup key={gi} messages={group.items} />
+          ) : (
+            <UserGroup key={gi} messages={group.items} />
+          ),
         )}
       </div>
       <div

@@ -157,13 +157,13 @@ describe('ChatQuestions LLM acknowledgement', () => {
     const composer = screen.getByPlaceholderText('Answer in your own words…') as HTMLTextAreaElement
     expect(composer.value).toBe('')
 
-    // Bubble placement must not be swapped: the user's own question renders as a
-    // right-aligned UserRow, and the coach's reply renders as a left-aligned
-    // CoachRow (with the sparkle-icon avatar) — regression coverage for a bug
+    // Bubble placement must not be swapped: the user's own question renders in a
+    // right-aligned UserGroup, and the coach's reply renders in a left-aligned
+    // CoachGroup (with the sparkle-icon avatar) — regression coverage for a bug
     // where these were flipped.
     const userQuestionBubbles = screen.getAllByText('what do you mean by score?')
-    const userRow = userQuestionBubbles.map((el) => el.closest('div[style*="justify-content: flex-end"]')).find(Boolean)
-    expect(userRow).toBeTruthy()
+    const userRow = userQuestionBubbles.map((el) => el.closest('div[style*="align-items: flex-end"]')).find(Boolean)
+    expect(userRow?.querySelector('svg')).toBeFalsy()
 
     const coachAnswerBubble = screen.getByText('Great question — a score just means where you feel you are today.')
     const coachRow = coachAnswerBubble.closest('div[style*="align-items: flex-end"]')
@@ -299,5 +299,69 @@ describe('ChatQuestions LLM acknowledgement', () => {
     // DOCUMENT_POSITION_FOLLOWING on the reply (as seen from the follow-up) means
     // the reply comes AFTER the follow-up in the DOM — the correct chronological order.
     expect(followUpEl.compareDocumentPosition(replyEl) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
+  it('groups consecutive coach messages under a single avatar instead of repeating it per message', () => {
+    // The fixed question and an immediately-following coach_followup are both
+    // coach messages with nothing from the user in between — they must share
+    // one avatar (one <svg>), stacked in one CoachGroup, not one avatar each.
+    const exchanges: Record<number, Exchange[]> = {
+      1: [{ kind: 'coach_followup', question: "What's pulling you down from six or seven?" }],
+    }
+    vi.useFakeTimers()
+    render(
+      <ChatQuestions
+        dept={sampleDept}
+        answers={{}}
+        setAnswer={() => {}}
+        exchanges={exchanges}
+        appendExchange={() => {}}
+        onBack={() => {}}
+        onDone={() => {}}
+        canMakeLlmCall={() => true}
+        recordLlmCall={() => {}}
+      />,
+    )
+    act(() => {
+      vi.advanceTimersByTime(TYPING_DELAY_MS + 50)
+    })
+    vi.useRealTimers()
+
+    const question = screen.getByText("Let's see where you're at. Give yourself a score out of 10 for this Department — honest, not generous.")
+    const followUp = screen.getByText("What's pulling you down from six or seven?")
+    const group = question.closest('div[style*="align-items: flex-end"]')
+    expect(group).toBeTruthy()
+    // Both messages belong to the same group (same nearest coach-group ancestor).
+    expect(followUp.closest('div[style*="align-items: flex-end"]')).toBe(group)
+    // Exactly one avatar for the whole group, not one per message.
+    expect(group?.querySelectorAll('svg').length).toBe(1)
+  })
+
+  it('restores the full transcript on resume instead of just the fixed-question answers', () => {
+    // Regression: exchanges (the only source of rendered chat bubbles) never
+    // persisted and always reset to {} on mount, including on resume — so a
+    // resumed draft correctly skipped past already-answered questions but showed
+    // an empty transcript for them. Simulates a resume by mounting with both
+    // `answers` and `exchanges` pre-populated, as DepartmentFlow now seeds both
+    // from entry.answers/entry.exchanges (see DepartmentFlow.tsx/DepartmentFlowRoute.tsx).
+    const exchanges: Record<number, Exchange[]> = {
+      1: [{ kind: 'final_answer', answer: '7 out of 10', acknowledgement: 'A solid seven.' }],
+    }
+    render(
+      <ChatQuestions
+        dept={sampleDept}
+        answers={{ 1: { picks: [], text: '7 out of 10' } }}
+        setAnswer={() => {}}
+        exchanges={exchanges}
+        appendExchange={() => {}}
+        onBack={() => {}}
+        onDone={() => {}}
+        canMakeLlmCall={() => true}
+        recordLlmCall={() => {}}
+      />,
+    )
+
+    expect(screen.getByText('7 out of 10')).toBeTruthy()
+    expect(screen.getByText('A solid seven.')).toBeTruthy()
   })
 })

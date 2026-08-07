@@ -3,6 +3,8 @@
 import type { ReactNode } from 'react'
 import { SparkleIcon } from '@/design-system'
 
+export type { CoachFollowUp, UserQuestion, FinalAnswer, Exchange } from './exchange'
+
 export interface ChatTurnSay {
   type: 'say'
   text: string
@@ -16,44 +18,34 @@ export interface ChatTurnAsk {
 
 export type ChatTurn = ChatTurnSay | ChatTurnAsk
 
-/** Ephemeral, per-session events layered on top of a fixed question's turn index,
- *  in strict chronological order — not part of the persisted Conversation/
- *  Department domain model, and never saved to conversationsStore (deliberate
- *  scope cut, same as the original follow-up feature). This is the ONLY record of
- *  what happened on a turn and in what order — rendering must map this array
- *  directly with no separate "answer slot" rendered before/after it, otherwise an
- *  answer given after an earlier follow-up/side-question visually jumps out of
- *  chronological order (see the bug this replaced). Three kinds:
- *  - coach_followup: the model chose to probe the user's answer further. Purely a
- *    remark shown to the user — whatever they type next is classified fresh against
- *    the ORIGINAL fixed question (see ChatQuestions.send()), so this has no separate
- *    "answer" of its own to track.
- *  - user_question: the user asked the coach something instead of answering, and
- *    got an in-persona answer, before the fixed question was actually answered.
- *  - final_answer: the message that was actually recorded as the fixed question's
- *    answer (answers[i]), plus its acknowledgement — appended at the moment it
- *    happens, so it takes its real place in the timeline instead of always
- *    rendering first. acknowledgement may be empty (the model left it blank). */
-export interface CoachFollowUp {
-  kind: 'coach_followup'
-  question: string
+const COACH_BUBBLE_STYLE: React.CSSProperties = {
+  background: 'var(--surface-card)',
+  border: '1px solid var(--border-subtle)',
+  borderRadius: '4px 18px 18px 18px',
+  padding: '13px 16px',
+  fontFamily: 'var(--font-primary)',
+  fontSize: 15.5,
+  lineHeight: 1.45,
+  color: 'var(--text-primary)',
 }
 
-export interface UserQuestion {
-  kind: 'user_question'
-  question: string
-  answer: string
+const USER_BUBBLE_STYLE: React.CSSProperties = {
+  maxWidth: '82%',
+  background: 'var(--accent)',
+  color: 'var(--text-on-accent)',
+  borderRadius: '18px 4px 18px 18px',
+  padding: '13px 16px',
+  fontFamily: 'var(--font-primary)',
+  fontSize: 15.5,
+  lineHeight: 1.4,
+  fontWeight: 500,
 }
 
-export interface FinalAnswer {
-  kind: 'final_answer'
-  answer: string
-  acknowledgement: string
-}
-
-export type Exchange = CoachFollowUp | UserQuestion | FinalAnswer
-
-export function CoachRow({ children }: { children: ReactNode }) {
+/** A run of consecutive coach messages sharing a single avatar, stacked
+ *  vertically beside it — the avatar only repeats when the sender actually
+ *  changes, matching standard chat-app grouping (see ChatQuestions.tsx, which
+ *  flattens the transcript into sender-grouped runs before rendering). */
+export function CoachGroup({ messages }: { messages: ReactNode[] }) {
   return (
     <div
       style={{
@@ -80,42 +72,28 @@ export function CoachRow({ children }: { children: ReactNode }) {
       >
         <SparkleIcon size={16} color="var(--accent)" />
       </div>
-      <div
-        style={{
-          background: 'var(--surface-card)',
-          border: '1px solid var(--border-subtle)',
-          borderRadius: '4px 18px 18px 18px',
-          padding: '13px 16px',
-          fontFamily: 'var(--font-primary)',
-          fontSize: 15.5,
-          lineHeight: 1.45,
-          color: 'var(--text-primary)',
-        }}
-      >
-        {children}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0 }}>
+        {messages.map((m, i) => (
+          <div key={i} style={COACH_BUBBLE_STYLE}>
+            {m}
+          </div>
+        ))}
       </div>
     </div>
   )
 }
 
-export function UserRow({ children }: { children: ReactNode }) {
+/** A run of consecutive user messages, stacked vertically — user messages never
+ *  had an avatar, so grouping here is purely about tightening the vertical gap
+ *  between them relative to the gap before/after a different sender's group. */
+export function UserGroup({ messages }: { messages: ReactNode[] }) {
   return (
-    <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 14, animation: 'ceoMsgIn 260ms ease' }}>
-      <div
-        style={{
-          maxWidth: '82%',
-          background: 'var(--accent)',
-          color: 'var(--text-on-accent)',
-          borderRadius: '18px 4px 18px 18px',
-          padding: '13px 16px',
-          fontFamily: 'var(--font-primary)',
-          fontSize: 15.5,
-          lineHeight: 1.4,
-          fontWeight: 500,
-        }}
-      >
-        {children}
-      </div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-end', marginBottom: 14, animation: 'ceoMsgIn 260ms ease' }}>
+      {messages.map((m, i) => (
+        <div key={i} style={USER_BUBBLE_STYLE}>
+          {m}
+        </div>
+      ))}
     </div>
   )
 }

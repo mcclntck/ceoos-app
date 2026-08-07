@@ -11,5 +11,5 @@
     "noEmit": true,
     "resolveJsonModule": true
   },
-  "include": ["**/*.ts", "../../src/departments/types.ts", "../../src/departments/departments.config.ts"]
+  "include": ["**/*.ts", "../../src/departments/types.ts", "../../src/departments/departments.config.ts", "../../src/features/flow/exchange.ts"]
 }

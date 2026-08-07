@@ -70,6 +70,8 @@ export interface FlowEntry {
    *  (rather than starting a new one) and its previously-saved answers. */
   conversationId?: string
   answers?: Record<number, ChatAnswer>
+  /** The saved chat transcript for a resumed draft — see Conversation.exchanges. */
+  exchanges?: Record<number, Exchange[]>
   /** Resuming an existing plan (e.g. from the Active actions list) — the array
    *  index to keep updating rather than creating a second, duplicate plan. */
   planIndex?: number
@@ -88,10 +90,11 @@ export interface DepartmentFlowProps {
   onOpenPlan?: ((planIndex: number) => void) | null
   onOpenConversation?: ((conversationId: string) => void) | null
   onAddAction?: ((deptId: DeptId) => void) | null
-  /** Called every time the in-progress chat's answers change, so a resumable
-   *  draft is saved continuously rather than only once the whole flow finishes —
-   *  correctness shouldn't depend on catching any particular "the user left" moment. */
-  onSaveDraft?: ((deptId: DeptId, conversationId: string, answers: Record<number, ChatAnswer>) => void) | null
+  /** Called every time the in-progress chat's answers or transcript change, so a
+   *  resumable draft is saved continuously rather than only once the whole flow
+   *  finishes — correctness shouldn't depend on catching any particular "the
+   *  user left" moment. */
+  onSaveDraft?: ((deptId: DeptId, conversationId: string, answers: Record<number, ChatAnswer>, exchanges: Record<number, Exchange[]>) => void) | null
   /** Called once an action + schedule are confirmed (tapping "Add to calendar"),
    *  so it's saved as an active plan immediately rather than only once the whole
    *  flow finishes — same reasoning as onSaveDraft. `planIndex` is null the first
@@ -123,12 +126,15 @@ export function DepartmentFlow({
   const [step, setStep] = useState<FlowStep>(entry?.done ? 'completed' : entry?.step || 'intro')
   const [chat, setChat] = useState<Record<number, ChatAnswer>>(entry?.answers ?? {})
   const setChatAns = (i: number, v: ChatAnswer) => setChat((c) => ({ ...c, [i]: v }))
-  /* Ordered side-exchanges (coach follow-ups + user side-questions) per fixed
-     question index — lifted up from ChatQuestions (rather than owned locally
-     there) so the /actions transcript builder below can fold them in. Not
-     persisted to conversationsStore (deliberate scope cut, same as answers'
-     resumable-draft feature not covering this either — see ChatBubbles.tsx). */
-  const [exchanges, setExchanges] = useState<Record<number, Exchange[]>>({})
+  /* Ordered side-exchanges (coach follow-ups, user side-questions, and each
+     answer's own acknowledgement) per fixed question index — lifted up from
+     ChatQuestions (rather than owned locally there) so the /actions transcript
+     builder below can fold them in, and so this and `chat` can be persisted
+     together via onSaveDraft below. This is the only source of rendered chat
+     bubbles (see ChatBubbles.tsx's Exchange doc comment) — without seeding it
+     from entry.exchanges, resuming a draft would restore which questions are
+     answered but show an empty transcript. */
+  const [exchanges, setExchanges] = useState<Record<number, Exchange[]>>(entry?.exchanges ?? {})
   const appendExchange = (i: number, exchange: Exchange) => setExchanges((e) => ({ ...e, [i]: [...(e[i] ?? []), exchange] }))
   /* Stable id for this chat session — reused from a resumed draft (entry.conversationId)
      or generated the first time an answer is saved. Kept in a ref (not state) since it
@@ -144,12 +150,12 @@ export function DepartmentFlow({
   const deptIdRef = useRef(dept.id)
   deptIdRef.current = dept.id
   useEffect(() => {
-    if (Object.keys(chat).length === 0) return
+    if (Object.keys(chat).length === 0 && Object.keys(exchanges).length === 0) return
     if (!conversationIdRef.current) {
       conversationIdRef.current = `c-${deptIdRef.current}-${Date.now()}`
     }
-    onSaveDraftRef.current?.(deptIdRef.current, conversationIdRef.current, chat)
-  }, [chat])
+    onSaveDraftRef.current?.(deptIdRef.current, conversationIdRef.current, chat, exchanges)
+  }, [chat, exchanges])
   const [action, setAction] = useState<string | null>(entry?.action ?? null)
   const [lastAction, setLastAction] = useState<string | null>(null)
   const [customActions, setCustomActions] = useState<string[]>([])

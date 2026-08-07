@@ -86,7 +86,7 @@ export function AddActionSheet({ open, departments, defaultDeptId, onClose, onAd
         <div style={{ width: 40, height: 4, borderRadius: 2, background: 'var(--border-strong)', margin: '0 auto 18px' }} />
         <h2 style={{ fontFamily: A_FONT, fontSize: 20, fontWeight: 600, color: 'var(--text-primary)', margin: '0 0 6px' }}>Add an action</h2>
         <p style={{ fontFamily: A_FONT, fontSize: 13.5, fontWeight: 300, color: 'var(--text-secondary)', lineHeight: 1.45, margin: '0 0 16px' }}>
-          One thing you'll actually do. Pick the Dept it belongs to and name it plainly.
+          One thing you'll actually do. Pick the Department it belongs to and name it plainly.
         </p>
 
         <div style={{ ...A_EYEBROW, marginBottom: 9 }}>Department</div>

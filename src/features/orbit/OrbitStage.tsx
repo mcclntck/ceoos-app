@@ -47,11 +47,11 @@ const ORBIT_VOICE: Record<'coach' | 'direct' | 'reflective', OrbitVoiceCopy> = {
     ),
     all: (_n) => (
       <>
-        All <b style={{ color: 'var(--accent)', fontWeight: 700 }}>five</b> Depts are being managed. Not equally at all times — but all of them, always.
+        All <b style={{ color: 'var(--accent)', fontWeight: 700 }}>five</b> Departments are being managed. Not equally at all times — but all of them, always.
       </>
     ),
     caption: 'Closer to You means better managed',
-    quote: '“These five Depts are as important today, as they will be ten years from now.”',
+    quote: '“These five Departments are as important today, as they will be ten years from now.”',
   },
   direct: {
     none: <>Five departments. All yours to lead. Pick one and start.</>,

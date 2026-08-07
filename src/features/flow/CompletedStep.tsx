@@ -49,7 +49,7 @@ export function CompletedStep({ dept, action, onBack, onStartNewChat, onAddAnoth
           <div style={{ fontFamily: 'var(--font-primary)', fontSize: 16.5, fontWeight: 600, color: 'var(--text-primary)', lineHeight: 1.35 }}>{action}</div>
         </GlassCard>
         <p style={{ fontFamily: 'var(--font-primary)', fontSize: 15, fontWeight: 300, color: 'var(--text-secondary)', lineHeight: 1.5, margin: '16px 0 0' }}>
-          Nothing left to do here. Keep the Dept moving — talk it through again, or commit to the next thing.
+          Nothing left to do here. Keep the Department moving — talk it through again, or commit to the next thing.
         </p>
       </div>
       <div style={{ padding: '14px var(--ceoos-gutter) calc(22px + env(safe-area-inset-bottom))', flexShrink: 0 }}>

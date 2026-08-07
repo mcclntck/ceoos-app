@@ -131,7 +131,7 @@ export function MyActionsScreen({ onOpenReminder }: MyActionsScreenProps) {
             <ProgressRing value={ledCount} max={5} size={72} showFraction />
             <div style={{ minWidth: 0 }}>
               <div style={{ fontFamily: A_FONT, fontSize: 17, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 4 }}>
-                {ledCount === 0 ? 'Lead your first Dept' : `Leading ${ledCount} of 5 departments`}
+                {ledCount === 0 ? 'Lead your first Department' : `Leading ${ledCount} of 5 departments`}
               </div>
               <div style={{ fontFamily: A_FONT, fontSize: 13.5, color: 'var(--text-secondary)', lineHeight: 1.45 }}>
                 {inFilter.length} action{inFilter.length === 1 ? '' : 's'} in {filterLabel} · {done.length} done
@@ -157,7 +157,7 @@ export function MyActionsScreen({ onOpenReminder }: MyActionsScreenProps) {
         ) : (
           <GlassCard radius={18} padding={20}>
             <div style={{ fontFamily: A_FONT, fontSize: 15, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-              Nothing completed here yet. Following through is what moves a Dept closer.
+              Nothing completed here yet. Following through is what moves a Department closer.
             </div>
           </GlassCard>
         )}

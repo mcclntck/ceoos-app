@@ -59,7 +59,7 @@ const RESPOND_TOOL: Anthropic.Tool = {
       answer_to_user: {
         type: 'string',
         description:
-          'When kind is "question": EXACTLY ONE short sentence (roughly 15 words or fewer) genuinely answering what they asked, grounded in this Dept and the conversation so far, optionally followed by ONE more short sentence (also roughly 15 words or fewer) handing back to the original question. Two short sentences maximum, total — no chaining extra clauses onto either one.',
+          'When kind is "question": EXACTLY ONE short sentence (roughly 15 words or fewer) genuinely answering what they asked, grounded in this Department and the conversation so far, optionally followed by ONE more short sentence (also roughly 15 words or fewer) handing back to the original question. Two short sentences maximum, total — no chaining extra clauses onto either one.',
       },
     },
     required: ['kind'],

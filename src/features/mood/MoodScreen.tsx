@@ -18,9 +18,9 @@ const M_EYEBROW = { fontFamily: M_FONT, fontSize: 11, letterSpacing: '0.18em', t
 
 const M_CULTURE = [
   'A depleted culture. Nothing gets led well from here — this is a signal, not a failure.',
-  'A cautious culture. You are managing, not leading. Worth asking which Dept is draining the others.',
+  'A cautious culture. You are managing, not leading. Worth asking which Department is draining the others.',
   'A steady culture. Reliable, but rarely the version of you that people remember.',
-  'A generous culture. You have capacity for others, and it shows in every Dept.',
+  'A generous culture. You have capacity for others, and it shows in every Department.',
   'A high-performing culture. Protect it — this is the state you want to be able to repeat.',
 ]
 
@@ -145,7 +145,7 @@ export function MoodScreen({ onOpenDept }: MoodScreenProps) {
 
         <SectionHead title="Where it points" />
         <p style={{ margin: '0 0 14px', fontFamily: M_FONT, fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-          When your culture dips, one Dept is usually behind it. Pick the one you suspect and open it up with your coach.
+          When your culture dips, one Department is usually behind it. Pick the one you suspect and open it up with your coach.
         </p>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 9, marginBottom: 22 }}>
           {departments.map((d) => (

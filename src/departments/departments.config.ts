@@ -13,10 +13,10 @@ export const CEOOS_DEPARTMENTS: Department[] = [
     coach:
       "Take a moment now. Not to log your title or your last raise—but to actually sit with where things stand: your growth, your relationships, and whether the direction you're on is still the one you want. If you don't do this thinking, who will?",
     questions: [
-      { q: "Let's see where you're at. Give yourself a score out of 10 for this Dept — honest, not generous." },
+      { q: "Let's see where you're at. Give yourself a score out of 10 for this Department — honest, not generous." },
       { q: 'What could you do easily to move that score up, or hold it where it is?' },
-      { q: 'How important is it to you to run this Dept well — or at least a little better than now?' },
-      { q: "What's working for you in this Dept right now?" },
+      { q: 'How important is it to you to run this Department well — or at least a little better than now?' },
+      { q: "What's working for you in this Department right now?" },
       { q: "And what's not working?" },
       {
         q: 'What could you start doing that would create incredible benefit here? Or is there something that, if you stopped, would make an even bigger impact?',
@@ -33,10 +33,10 @@ export const CEOOS_DEPARTMENTS: Department[] = [
     coach:
       "This isn't just about logging your steps and Pilates sessions. This is the whole scorecard—physical health, mental health, sleep, nutrition, movement, your relationship with stress, with rest, with alcohol, and anything else that touches the health of your human.",
     questions: [
-      { q: "Let's see where you're at. Give yourself a score out of 10 for this Dept — honest, not generous." },
+      { q: "Let's see where you're at. Give yourself a score out of 10 for this Department — honest, not generous." },
       { q: 'What could you do easily to move that score up, or hold it where it is?' },
-      { q: 'How important is it to you to run this Dept well — or at least a little better than now?' },
-      { q: "What's working for you in this Dept right now?" },
+      { q: 'How important is it to you to run this Department well — or at least a little better than now?' },
+      { q: "What's working for you in this Department right now?" },
       { q: "And what's not working?" },
       {
         q: 'What could you start doing that would create incredible benefit here? Or is there something that, if you stopped, would make an even bigger impact?',
@@ -53,10 +53,10 @@ export const CEOOS_DEPARTMENTS: Department[] = [
     coach:
       'Career is how you make money. Wealth is what you do with it. And most of us never chose our relationship with money — we inherited it.',
     questions: [
-      { q: "Let's see where you're at. Give yourself a score out of 10 for this Dept — honest, not generous." },
+      { q: "Let's see where you're at. Give yourself a score out of 10 for this Department — honest, not generous." },
       { q: 'What could you do easily to move that score up, or hold it where it is?' },
-      { q: 'How important is it to you to run this Dept well — or at least a little better than now?' },
-      { q: "What's working for you in this Dept right now?" },
+      { q: 'How important is it to you to run this Department well — or at least a little better than now?' },
+      { q: "What's working for you in this Department right now?" },
       { q: "And what's not working?" },
       {
         q: 'What could you start doing that would create incredible benefit here? Or is there something that, if you stopped, would make an even bigger impact?',
@@ -73,10 +73,10 @@ export const CEOOS_DEPARTMENTS: Department[] = [
     coach:
       "Head of Fun is arguably the greatest job title you could hold — and it gets the least time, attention and resources. Fun isn't the reward for hard work—it's the fuel for it.",
     questions: [
-      { q: "Let's see where you're at. Give yourself a score out of 10 for this Dept — honest, not generous." },
+      { q: "Let's see where you're at. Give yourself a score out of 10 for this Department — honest, not generous." },
       { q: 'What could you do easily to move that score up, or hold it where it is?' },
-      { q: 'How important is it to you to run this Dept well — or at least a little better than now?' },
-      { q: "What's working for you in this Dept right now?" },
+      { q: 'How important is it to you to run this Department well — or at least a little better than now?' },
+      { q: "What's working for you in this Department right now?" },
       { q: "And what's not working?" },
       {
         q: 'What could you start doing that would create incredible benefit here? Or is there something that, if you stopped, would make an even bigger impact?',
@@ -93,10 +93,10 @@ export const CEOOS_DEPARTMENTS: Department[] = [
     coach:
       'This department is about connection. Who do you want a relationship with that you’re not paid to have? Partners, children, siblings, extended family, friends.',
     questions: [
-      { q: "Let's see where you're at. Give yourself a score out of 10 for this Dept — honest, not generous." },
+      { q: "Let's see where you're at. Give yourself a score out of 10 for this Department — honest, not generous." },
       { q: 'What could you do easily to move that score up, or hold it where it is?' },
-      { q: 'How important is it to you to run this Dept well — or at least a little better than now?' },
-      { q: "What's working for you in this Dept right now?" },
+      { q: 'How important is it to you to run this Department well — or at least a little better than now?' },
+      { q: "What's working for you in this Department right now?" },
       { q: "And what's not working?" },
       {
         q: 'What could you start doing that would create incredible benefit here? Or is there something that, if you stopped, would make an even bigger impact?',

@@ -35,7 +35,7 @@ export function DoneStep({ dept, moodLabel, onFinish }: DoneStepProps) {
         <h1 style={{ ...F_H1, fontSize: 28, marginBottom: 12 }}>Full circle.</h1>
         <p style={{ fontFamily: 'var(--font-primary)', fontSize: 15.5, color: 'var(--text-secondary)', lineHeight: 1.55, margin: '0 0 26px' }}>
           You reflected, committed, followed through and checked in. Your{' '}
-          <b style={{ color: 'var(--text-primary)', fontWeight: 700 }}>{dept.label}</b> Dept just moved closer to You. Water it
+          <b style={{ color: 'var(--text-primary)', fontWeight: 700 }}>{dept.label}</b> Department just moved closer to You. Water it
           again soon.
         </p>
         <GlassCard radius={20} padding={20}>

@@ -58,7 +58,7 @@ export function TadaStep({ dept, onNext }: TadaStepProps) {
         <div style={{ ...F_EYEBROW, marginBottom: 12 }}>Followed through</div>
         <h1 style={{ ...F_H1, marginBottom: 14 }}>You led your {dept.label.toLowerCase()}.</h1>
         <p style={{ fontFamily: 'var(--font-primary)', fontSize: 15.5, fontWeight: 300, color: 'var(--text-secondary)', lineHeight: 1.5, maxWidth: 300 }}>
-          Following through is how a Dept pulls closer to you. Not a trend, not a hack — leadership.
+          Following through is how a Department pulls closer to you. Not a trend, not a hack — leadership.
         </p>
       </div>
       <div style={{ padding: '14px var(--ceoos-gutter) calc(22px + env(safe-area-inset-bottom))', flexShrink: 0 }}>

@@ -67,7 +67,7 @@ export const O_STEPS: OnboardingStep[] = [
     body: (
       <>
         CEO OF SELF is built on Tim Simons’ two decades of real coaching conversations — not a generic AI guessing at your
-        life. He knows the method. He has set up your Depts ready for you to lead. CEO OF SELF will ask you questions rather
+        life. He knows the method. He has set up your Departments ready for you to lead. CEO OF SELF will ask you questions rather
         than handing you scripts.
       </>
     ),

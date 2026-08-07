@@ -13,7 +13,7 @@ team a shared, live reference while the real native app is built.
 
 ## Live demo
 
-Deployed on Netlify: https://ceeo-of-self.netlify.app
+Deployed on Netlify: https://www.pilot.ceoofself.org
 
 ## What's in the prototype
 

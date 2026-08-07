@@ -21,7 +21,6 @@ export type ChatTurn = ChatTurnSay | ChatTurnAsk
 const COACH_BUBBLE_STYLE: React.CSSProperties = {
   background: 'var(--surface-card)',
   border: '1px solid var(--border-subtle)',
-  borderRadius: '4px 18px 18px 18px',
   padding: '13px 16px',
   fontFamily: 'var(--font-primary)',
   fontSize: 15.5,
@@ -33,12 +32,37 @@ const USER_BUBBLE_STYLE: React.CSSProperties = {
   maxWidth: '82%',
   background: 'var(--accent)',
   color: 'var(--text-on-accent)',
-  borderRadius: '18px 4px 18px 18px',
   padding: '13px 16px',
   fontFamily: 'var(--font-primary)',
   fontSize: 15.5,
   lineHeight: 1.4,
   fontWeight: 500,
+}
+
+/** A stacked group's bubbles read as one connected shape rather than N separate
+ *  pills: the first bubble keeps the full rounded corners on top, the last keeps
+ *  them on bottom, and any bubble in between (or the seam between two bubbles)
+ *  gets a small "joint" radius instead of none — fully square would look like a
+ *  seam had broken off from the group, not joined it. `tightCorner` is the
+ *  existing near-avatar/near-accent-edge corner (top-left for coach, top-right
+ *  for user) that stays tight (4px) whenever it's on the first bubble, exactly
+ *  like the single-bubble style did. */
+function groupRadius(position: 'only' | 'first' | 'middle' | 'last', tightCorner: 'top-left' | 'top-right'): string {
+  const FULL = 18
+  const JOINT = 6
+  const TIGHT = 4
+  const top = position === 'only' || position === 'first' ? FULL : JOINT
+  const bottom = position === 'only' || position === 'last' ? FULL : JOINT
+  const topLeft = tightCorner === 'top-left' && (position === 'only' || position === 'first') ? TIGHT : top
+  const topRight = tightCorner === 'top-right' && (position === 'only' || position === 'first') ? TIGHT : top
+  return `${topLeft}px ${topRight}px ${bottom}px ${bottom}px`
+}
+
+function positionOf(index: number, length: number): 'only' | 'first' | 'middle' | 'last' {
+  if (length === 1) return 'only'
+  if (index === 0) return 'first'
+  if (index === length - 1) return 'last'
+  return 'middle'
 }
 
 /** A run of consecutive coach messages sharing a single avatar, stacked
@@ -72,9 +96,9 @@ export function CoachGroup({ messages }: { messages: ReactNode[] }) {
       >
         <SparkleIcon size={16} color="var(--accent)" />
       </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
         {messages.map((m, i) => (
-          <div key={i} style={COACH_BUBBLE_STYLE}>
+          <div key={i} style={{ ...COACH_BUBBLE_STYLE, borderRadius: groupRadius(positionOf(i, messages.length), 'top-left') }}>
             {m}
           </div>
         ))}
@@ -88,9 +112,9 @@ export function CoachGroup({ messages }: { messages: ReactNode[] }) {
  *  between them relative to the gap before/after a different sender's group. */
 export function UserGroup({ messages }: { messages: ReactNode[] }) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-end', marginBottom: 14, animation: 'ceoMsgIn 260ms ease' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 2, alignItems: 'flex-end', marginBottom: 14, animation: 'ceoMsgIn 260ms ease' }}>
       {messages.map((m, i) => (
-        <div key={i} style={USER_BUBBLE_STYLE}>
+        <div key={i} style={{ ...USER_BUBBLE_STYLE, borderRadius: groupRadius(positionOf(i, messages.length), 'top-right') }}>
           {m}
         </div>
       ))}

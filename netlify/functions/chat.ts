@@ -48,17 +48,18 @@ const RESPOND_TOOL: Anthropic.Tool = {
       },
       acknowledgement: {
         type: 'string',
-        description: 'When kind is "answer": 1-2 short sentences, in persona, reacting to what the user said.',
+        description:
+          'When kind is "answer": EXACTLY ONE short sentence (roughly 15 words or fewer), in persona, reacting to what the user said. No em dashes/semicolons/"and"/"but" chaining a second clause on. Never two sentences.',
       },
       follow_up_question: {
         type: 'string',
         description:
-          'When kind is "answer": ONE natural, in-persona follow-up question probing something specific, surprising, or incomplete in their answer. Omit this field entirely if no follow-up is warranted (which should be the common case).',
+          'When kind is "answer": ONE short, natural, in-persona follow-up question — a single short sentence, roughly 15 words or fewer, no chained clauses — probing something specific, surprising, or incomplete in their answer. Omit this field entirely if no follow-up is warranted (which should be the common case).',
       },
       answer_to_user: {
         type: 'string',
         description:
-          'When kind is "question": your genuinely helpful, in-persona answer to what they asked, grounded in this Dept and the conversation so far.',
+          'When kind is "question": EXACTLY ONE short sentence (roughly 15 words or fewer) genuinely answering what they asked, grounded in this Dept and the conversation so far, optionally followed by ONE more short sentence (also roughly 15 words or fewer) handing back to the original question. Two short sentences maximum, total — no chaining extra clauses onto either one.',
       },
     },
     required: ['kind'],

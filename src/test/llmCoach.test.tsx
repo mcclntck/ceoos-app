@@ -200,4 +200,104 @@ describe('ChatQuestions LLM acknowledgement', () => {
       expect(screen.getByText('What made you land on that number?')).toBeTruthy()
     })
   })
+
+  it('keeps the composer live after every question is answered, and shows an in-chat prompt instead of replacing it with a button', async () => {
+    // Regression: the footer used to swap the composer out entirely for a
+    // full-width "Pick my action" button once allDone — the user could no
+    // longer type. Chat must stay available the whole time; the action prompt
+    // is just another turn in the transcript, not a takeover of the footer.
+    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: false }))) // force the fail-open "take as answer" path for every send
+    vi.useFakeTimers()
+    const onDone = vi.fn()
+    let answers: Record<number, { picks?: string[]; text?: string }> = {}
+    const setAnswer = vi.fn((i: number, v: { picks?: string[]; text?: string }) => {
+      answers = { ...answers, [i]: v }
+    })
+    const { rerender } = render(
+      <ChatQuestions
+        dept={sampleDept}
+        answers={answers}
+        setAnswer={setAnswer}
+        exchanges={{}}
+        appendExchange={() => {}}
+        onBack={() => {}}
+        onDone={onDone}
+        canMakeLlmCall={() => true}
+        recordLlmCall={() => {}}
+      />,
+    )
+
+    for (let q = 0; q < sampleDept.questions.length; q++) {
+      act(() => {
+        vi.advanceTimersByTime(TYPING_DELAY_MS + 50)
+      })
+      const textarea = screen.getByPlaceholderText('Answer in your own words…') as HTMLTextAreaElement
+      fireEvent.change(textarea, { target: { value: `answer ${q}` } })
+      fireEvent.click(screen.getByRole('button', { name: '' }))
+      await act(async () => {
+        await Promise.resolve()
+      })
+      rerender(
+        <ChatQuestions
+          dept={sampleDept}
+          answers={answers}
+          setAnswer={setAnswer}
+          exchanges={{}}
+          appendExchange={() => {}}
+          onBack={() => {}}
+          onDone={onDone}
+          canMakeLlmCall={() => true}
+          recordLlmCall={() => {}}
+        />,
+      )
+    }
+    act(() => {
+      vi.advanceTimersByTime(TYPING_DELAY_MS + 50)
+    })
+    vi.useRealTimers()
+
+    // The composer must still be present and usable — no full-width takeover.
+    const composer = screen.getByPlaceholderText('Answer in your own words…') as HTMLTextAreaElement
+    expect(composer).toBeTruthy()
+
+    // The in-chat prompt appears as a coach turn, not a footer button.
+    const prompt = screen.getByText('Pick my action')
+    expect(prompt.tagName).toBe('BUTTON')
+    fireEvent.click(prompt)
+    expect(onDone).toHaveBeenCalled()
+  })
+
+  it('renders exchange entries for a turn in the order they were appended, not with the final answer always first', () => {
+    // Regression: answers[i]/acknowledgements[i] used to render in a fixed slot
+    // that always came before the exchanges[i] array, regardless of when the
+    // answer actually happened. A coach_followup appended BEFORE the eventual
+    // final_answer must still render above it — exchanges[i] is now the single
+    // ordered timeline for a turn (see ChatBubbles.tsx's Exchange doc comment),
+    // and the render loop must map it directly with no separate answer slot.
+    const exchanges: Record<number, Exchange[]> = {
+      1: [
+        { kind: 'coach_followup', question: "What's pulling you down from six or seven?" },
+        { kind: 'final_answer', answer: 'running. def low on energy to run well now.', acknowledgement: 'Running without energy will drain you.' },
+      ],
+    }
+    render(
+      <ChatQuestions
+        dept={sampleDept}
+        answers={{ 1: { picks: [], text: 'running. def low on energy to run well now.' } }}
+        setAnswer={() => {}}
+        exchanges={exchanges}
+        appendExchange={() => {}}
+        onBack={() => {}}
+        onDone={() => {}}
+        canMakeLlmCall={() => true}
+        recordLlmCall={() => {}}
+      />,
+    )
+
+    const followUpEl = screen.getByText("What's pulling you down from six or seven?")
+    const replyEl = screen.getByText('running. def low on energy to run well now.')
+    // DOCUMENT_POSITION_FOLLOWING on the reply (as seen from the follow-up) means
+    // the reply comes AFTER the follow-up in the DOM — the correct chronological order.
+    expect(followUpEl.compareDocumentPosition(replyEl) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
 })

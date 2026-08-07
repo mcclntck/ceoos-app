@@ -91,9 +91,6 @@ export function ChatQuestions({
   const [typing, setTyping] = useState(true)
   const [draft, setDraft] = useState<ChatDraft>({ picks: [], text: '' })
   const scRef = useRef<HTMLDivElement | null>(null)
-  /* LLM-generated acknowledgements, keyed by the turn index they follow.
-     Populated after the real network call resolves — see send() below. */
-  const [acknowledgements, setAcknowledgements] = useState<Record<number, string>>({})
   /* The user's just-sent message, shown optimistically as a UserRow before we know
      whether the /chat call will classify it as an answer or a side-question — see
      send() below. Cleared once the response resolves (folded into either `answers`
@@ -133,7 +130,7 @@ export function ChatQuestions({
   useEffect(() => {
     const el = scRef.current
     if (el) el.scrollTop = el.scrollHeight
-  }, [activeIdx, typing, answers, acknowledgements, exchanges, pendingMessage])
+  }, [activeIdx, typing, answers, exchanges, pendingMessage])
 
   /* Tapping the chat (not the composer itself) dismisses the keyboard, matching
      standard chat-app tap-to-dismiss behaviour. */
@@ -167,39 +164,32 @@ export function ChatQuestions({
     setPendingMessage(userMessage)
     setDraft({ picks: [], text: '' })
 
+    // Exchange entries are the single source of chronological truth for a turn
+    // (see ChatBubbles.tsx's Exchange doc comment) — build prior context by
+    // walking them directly instead of a separate "answer slot" that always
+    // came first regardless of when it actually happened.
+    const exchangeToTurns = (ex: Exchange): AcknowledgementTurn[] => {
+      if (ex.kind === 'coach_followup') return [{ role: 'assistant', content: ex.question }]
+      if (ex.kind === 'user_question') return [{ role: 'user', content: ex.question }, { role: 'assistant', content: ex.answer }]
+      const say: AcknowledgementTurn[] = [{ role: 'user', content: ex.answer }]
+      if (ex.acknowledgement) say.push({ role: 'assistant', content: ex.acknowledgement })
+      return say
+    }
     const priorTurns: AcknowledgementTurn[] = visible
       .filter((i) => i < answeredIdx)
       .flatMap((i): AcknowledgementTurn[] => {
         const t = turns[i]
         const say: AcknowledgementTurn[] = [{ role: 'assistant', content: t.type === 'say' ? t.text ?? '' : t.q }]
-        if (t.type === 'ask' && answered(i)) {
-          say.push({ role: 'user', content: answerText(answers[i]) })
-          const ack = acknowledgements[i]
-          if (ack) say.push({ role: 'assistant', content: ack })
-          for (const ex of exchanges[i] ?? []) {
-            if (ex.kind === 'coach_followup') {
-              say.push({ role: 'assistant', content: ex.question })
-            } else {
-              say.push({ role: 'user', content: ex.question })
-              say.push({ role: 'assistant', content: ex.answer })
-            }
-          }
-        }
+        for (const ex of exchanges[i] ?? []) say.push(...exchangeToTurns(ex))
         return say
       })
-    // Side-questions already asked (and answered) on THIS same fixed question,
-    // so the model has context for a follow-up question that's really a second question.
-    for (const ex of exchanges[answeredIdx] ?? []) {
-      if (ex.kind === 'coach_followup') {
-        priorTurns.push({ role: 'assistant', content: ex.question })
-      } else {
-        priorTurns.push({ role: 'user', content: ex.question })
-        priorTurns.push({ role: 'assistant', content: ex.answer })
-      }
-    }
+    // Side-exchanges already on THIS same fixed question, so the model has
+    // context for a follow-up question that's really a second question.
+    for (const ex of exchanges[answeredIdx] ?? []) priorTurns.push(...exchangeToTurns(ex))
 
     const takeAsAnswer = () => {
       setAnswer(answeredIdx, { picks, text })
+      appendExchange(answeredIdx, { kind: 'final_answer', answer: userMessage, acknowledgement: '' })
       setPendingMessage(null)
     }
 
@@ -222,8 +212,8 @@ export function ChatQuestions({
         return
       }
       setAnswer(answeredIdx, { picks, text })
+      appendExchange(answeredIdx, { kind: 'final_answer', answer: userMessage, acknowledgement: res.acknowledgement })
       setPendingMessage(null)
-      setAcknowledgements((prev) => ({ ...prev, [answeredIdx]: res.acknowledgement }))
       if (res.followUpQuestion) {
         // Staleness guard: drop silently if the user has already moved past the
         // point this follow-up would attach to (the next fixed question is answered).
@@ -272,16 +262,22 @@ export function ChatQuestions({
           return (
             <div key={i}>
               <CoachRow>{t.type === 'say' ? <SayContent t={t} /> : t.q}</CoachRow>
-              {t.type === 'ask' && answered(i) && <UserRow>{answerText(answers[i])}</UserRow>}
-              {t.type === 'ask' && answered(i) && acknowledgements[i] && <CoachRow>{acknowledgements[i]}</CoachRow>}
+              {/* exchanges[i] is the single chronological record of everything that
+                  happened on this turn — the final answer's own row is just one more
+                  entry in it, in the position it actually occurred (see send()). */}
               {(exchanges[i] ?? []).map((ex, exIdx) => (
                 <div key={exIdx}>
-                  {ex.kind === 'coach_followup' ? (
-                    <CoachRow>{ex.question}</CoachRow>
-                  ) : (
+                  {ex.kind === 'coach_followup' && <CoachRow>{ex.question}</CoachRow>}
+                  {ex.kind === 'user_question' && (
                     <>
                       <UserRow>{ex.question}</UserRow>
                       <CoachRow>{ex.answer}</CoachRow>
+                    </>
+                  )}
+                  {ex.kind === 'final_answer' && (
+                    <>
+                      <UserRow>{ex.answer}</UserRow>
+                      {ex.acknowledgement && <CoachRow>{ex.acknowledgement}</CoachRow>}
                     </>
                   )}
                 </div>
@@ -293,6 +289,19 @@ export function ChatQuestions({
         {typing && active && (
           <CoachRow>
             <TypingDots />
+          </CoachRow>
+        )}
+        {/* Chat keeps working after the last question — this is just a tappable
+            prompt in the transcript, not a screen swap. The composer below stays
+            live the whole time so the user can keep talking instead of acting on it. */}
+        {allDone && !typing && (
+          <CoachRow>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'flex-start' }}>
+              <span>Whenever you&rsquo;re ready, let&rsquo;s turn this into one thing you&rsquo;ll actually do.</span>
+              <Button variant="primary" size="sm" onClick={onDone}>
+                Pick my action
+              </Button>
+            </div>
           </CoachRow>
         )}
       </div>
@@ -308,11 +317,7 @@ export function ChatQuestions({
           background: '#0a0a0a',
         }}
       >
-        {allDone ? (
-          <Button variant="primary" size="lg" fullWidth onClick={onDone}>
-            Pick my action
-          </Button>
-        ) : typing ? (
+        {typing ? (
           <div style={{ height: 52 }} />
         ) : (
           <ChatInput

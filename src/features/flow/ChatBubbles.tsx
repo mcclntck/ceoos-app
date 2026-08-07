@@ -43,19 +43,21 @@ const USER_BUBBLE_STYLE: React.CSSProperties = {
  *  pills: the first bubble keeps the full rounded corners on top, the last keeps
  *  them on bottom, and any bubble in between (or the seam between two bubbles)
  *  gets a small "joint" radius instead of none — fully square would look like a
- *  seam had broken off from the group, not joined it. `tightCorner` is the
- *  existing near-avatar/near-accent-edge corner (top-left for coach, top-right
- *  for user) that stays tight (4px) whenever it's on the first bubble, exactly
- *  like the single-bubble style did. */
-function groupRadius(position: 'only' | 'first' | 'middle' | 'last', tightCorner: 'top-left' | 'top-right'): string {
+ *  seam had broken off from the group, not joined it. The group's avatar sits at
+ *  the BOTTOM (both groups are bottom-aligned, `alignItems: 'flex-end'`), so the
+ *  tight "this is the one speaking" corner belongs on the LAST bubble, nearest
+ *  the avatar — not the first. `tightCorner` is that near-avatar/near-accent-edge
+ *  corner (bottom-left for coach, bottom-right for user). */
+function groupRadius(position: 'only' | 'first' | 'middle' | 'last', tightCorner: 'bottom-left' | 'bottom-right'): string {
   const FULL = 18
   const JOINT = 6
   const TIGHT = 4
   const top = position === 'only' || position === 'first' ? FULL : JOINT
   const bottom = position === 'only' || position === 'last' ? FULL : JOINT
-  const topLeft = tightCorner === 'top-left' && (position === 'only' || position === 'first') ? TIGHT : top
-  const topRight = tightCorner === 'top-right' && (position === 'only' || position === 'first') ? TIGHT : top
-  return `${topLeft}px ${topRight}px ${bottom}px ${bottom}px`
+  const isLast = position === 'only' || position === 'last'
+  const bottomLeft = tightCorner === 'bottom-left' && isLast ? TIGHT : bottom
+  const bottomRight = tightCorner === 'bottom-right' && isLast ? TIGHT : bottom
+  return `${top}px ${top}px ${bottomRight}px ${bottomLeft}px`
 }
 
 function positionOf(index: number, length: number): 'only' | 'first' | 'middle' | 'last' {
@@ -96,9 +98,9 @@ export function CoachGroup({ messages }: { messages: ReactNode[] }) {
       >
         <SparkleIcon size={16} color="var(--accent)" />
       </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
         {messages.map((m, i) => (
-          <div key={i} style={{ ...COACH_BUBBLE_STYLE, borderRadius: groupRadius(positionOf(i, messages.length), 'top-left') }}>
+          <div key={i} style={{ ...COACH_BUBBLE_STYLE, borderRadius: groupRadius(positionOf(i, messages.length), 'bottom-left') }}>
             {m}
           </div>
         ))}
@@ -112,9 +114,9 @@ export function CoachGroup({ messages }: { messages: ReactNode[] }) {
  *  between them relative to the gap before/after a different sender's group. */
 export function UserGroup({ messages }: { messages: ReactNode[] }) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 2, alignItems: 'flex-end', marginBottom: 14, animation: 'ceoMsgIn 260ms ease' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-end', marginBottom: 14, animation: 'ceoMsgIn 260ms ease' }}>
       {messages.map((m, i) => (
-        <div key={i} style={{ ...USER_BUBBLE_STYLE, borderRadius: groupRadius(positionOf(i, messages.length), 'top-right') }}>
+        <div key={i} style={{ ...USER_BUBBLE_STYLE, borderRadius: groupRadius(positionOf(i, messages.length), 'bottom-right') }}>
           {m}
         </div>
       ))}

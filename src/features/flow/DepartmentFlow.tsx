@@ -38,6 +38,7 @@ import { Button } from '@/design-system'
 import { fetchSuggestedActions } from './llmCoach'
 import { answerText } from './ChatQuestions'
 import type { Exchange } from './ChatBubbles'
+import { trackEvent } from '@/lib/analytics'
 
 const F_EYEBROW: React.CSSProperties = {
   fontFamily: 'var(--font-primary)',
@@ -279,7 +280,10 @@ export function DepartmentFlow({
         exchanges={exchanges}
         appendExchange={appendExchange}
         onBack={() => setStep('intro')}
-        onDone={() => setStep('action')}
+        onDone={() => {
+          trackEvent('action_step_reached', { deptId: dept.id })
+          setStep('action')
+        }}
         canMakeLlmCall={canMakeLlmCall}
         recordLlmCall={recordLlmCall}
       />

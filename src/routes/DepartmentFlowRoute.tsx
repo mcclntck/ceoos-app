@@ -11,6 +11,7 @@ import { useConversations } from '@/state/conversationsStore'
 import { CEOOS_MOODS } from '@/departments/departments.config'
 import type { ChatAnswer, DeptId, Plan } from '@/departments/types'
 import type { Exchange } from '@/features/flow/ChatBubbles'
+import { trackEvent } from '@/lib/analytics'
 
 interface FlowLocationState {
   planIndex?: number
@@ -98,6 +99,7 @@ export function DepartmentFlowRoute() {
         else addPlan(plan)
       }}
       onComplete={(completedDeptId, level, completedPlan: Plan, conversationId: string, completedPlanIndex: number | null) => {
+        trackEvent('chat_completed', { deptId: completedDeptId })
         raiseLevel(completedDeptId, level)
         upsertConversation(completedDeptId, {
           id: conversationId,

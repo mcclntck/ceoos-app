@@ -11,6 +11,22 @@
       href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;900&family=Caveat:wght@500;700&display=swap"
     />
     <title>CEO of Self</title>
+    <!-- Google tag (gtag.js) — Measurement ID substituted by Vite's native
+         %VITE_NAME% index.html placeholder support (see src/lib/analytics.ts
+         for the route-change/custom-event tracking that pairs with this). -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=%VITE_GA_MEASUREMENT_ID%"></script>
+    <script>
+      window.dataLayer = window.dataLayer || []
+      function gtag() {
+        dataLayer.push(arguments)
+      }
+      gtag('js', new Date())
+      // send_page_view: false — this is a client-routed SPA, so the initial
+      // automatic pageview would both double-count the first route and miss
+      // every subsequent one. src/lib/analytics.ts reports pageviews itself
+      // on every React Router navigation instead.
+      gtag('config', '%VITE_GA_MEASUREMENT_ID%', { send_page_view: false })
+    </script>
   </head>
   <body>
     <div id="root"></div>

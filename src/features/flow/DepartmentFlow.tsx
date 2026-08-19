@@ -178,6 +178,12 @@ export function DepartmentFlow({
      after, mirroring the conversationId/onSaveDraft pattern above. */
   const planIndexRef = useRef<number | null>(entry?.planIndex ?? null)
 
+  /* Set by CustomActionSheet's onSave below, read (and reset) by savePlanActive
+     so action_created's `source` param reflects whichever action text is
+     actually being saved — a ref since it's read imperatively at save time,
+     not rendered. */
+  const customActionUsedRef = useRef(false)
+
   /* Session-wide LLM call budget — a client-only pilot app with no database or
      server-side session state, so this useRef counter (reset every new mount,
      i.e. every new chat session or resumed draft) is the pragmatic cap. Combines
@@ -213,6 +219,8 @@ export function DepartmentFlow({
      it's preserved as an active plan even if they leave before finishing the
      rest of the flow (did/tada/mood) — see onSavePlan's doc comment. */
   const savePlanActive = () => {
+    trackEvent('action_created', { deptId: dept.id, source: customActionUsedRef.current ? 'custom' : 'suggested' })
+    customActionUsedRef.current = false
     onSavePlanRef.current?.(dept.id, buildPlan(), planIndexRef.current)
     if (planIndexRef.current == null) planIndexRef.current = 0
   }
@@ -268,7 +276,10 @@ export function DepartmentFlow({
         onOpenPlan={onOpenPlan}
         onOpenConversation={onOpenConversation}
         onBack={onBack}
-        onNewChat={() => setStep('q')}
+        onNewChat={() => {
+          trackEvent('chat_started', { deptId: dept.id, resumed: false })
+          setStep('q')
+        }}
       />
     )
   } else if (step === 'q') {
@@ -343,8 +354,14 @@ export function DepartmentFlow({
         dayLabel={dayLabel}
         onBack={() => (didEntry && !scheduledOnce ? onBack() : setStep('scheduled'))}
         onChat={() => setStep('q')}
-        onDidIt={() => setStep('tada')}
-        onNotYet={onBack}
+        onDidIt={() => {
+          trackEvent('action_completed', { deptId: dept.id })
+          setStep('tada')
+        }}
+        onNotYet={() => {
+          trackEvent('action_not_done', { deptId: dept.id })
+          onBack()
+        }}
       />
     )
   } else if (step === 'completed') {
@@ -378,6 +395,7 @@ export function DepartmentFlow({
             size="lg"
             fullWidth
             onClick={() => {
+              trackEvent('mood_logged', { deptId: dept.id, mood: moods[mood] })
               if (mood <= 1) {
                 setLastAction(action)
                 setAction(null)
@@ -421,6 +439,7 @@ export function DepartmentFlow({
         open={customOpen}
         onClose={() => setCustomOpen(false)}
         onSave={(t) => {
+          customActionUsedRef.current = true
           setCustomActions((c) => [...c, t])
           setAction(t)
         }}

@@ -19,6 +19,7 @@ import type { ChatDraft } from './ChatInput'
 import { fetchCoachAcknowledgement } from './llmCoach'
 import type { AcknowledgementTurn } from './llmCoach'
 import { useKeyboardInset } from './useKeyboardInset'
+import { trackEvent } from '@/lib/analytics'
 
 /** The prototype's hardcoded "coach is typing" pause before the next question appears. */
 export const TYPING_DELAY_MS = 650
@@ -150,6 +151,7 @@ export function ChatQuestions({
      message after the fact (see plan §"Why no new pending state is needed"). */
   const send = () => {
     if (!canSend || activeIdx == null) return
+    trackEvent('chat_message_sent', { deptId: dept.id })
     const answeredIdx = activeIdx
     const question = turns[answeredIdx].type === 'ask' ? turns[answeredIdx].q : ''
     const userMessage = answerText({ picks: draft.picks, text: draft.text.trim() })

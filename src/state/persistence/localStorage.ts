@@ -33,6 +33,7 @@ export const STORAGE_KEYS = {
   conversations: 'conversations',
   mood: 'mood',
   onboardingDone: 'onboardingDone',
+  lastOpenAt: 'lastOpenAt',
 } as const
 
 export function chatHistoryKey(deptId: string): string {

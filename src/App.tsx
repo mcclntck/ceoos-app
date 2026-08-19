@@ -10,7 +10,8 @@ import { DepartmentFlowRoute } from '@/routes/DepartmentFlowRoute'
 import { ActionsRoute } from '@/routes/ActionsRoute'
 import { MoodRoute } from '@/routes/MoodRoute'
 import { useIdentity } from '@/state/identityStore'
-import { trackPageView } from '@/lib/analytics'
+import { trackPageView, trackEvent } from '@/lib/analytics'
+import { STORAGE_KEYS, readJSON, writeJSON } from '@/state/persistence/localStorage'
 
 /* Reports a GA4 pageview on every React Router navigation — index.html's gtag
    config disables the automatic pageview (send_page_view: false) specifically
@@ -34,7 +35,23 @@ function RootRedirect() {
   return <Navigate to={identity ? '/departments' : '/login'} replace />
 }
 
+/* Reports how many days it's been since the app was last opened (localStorage
+   has no timestamp of its own, unlike GA4's own new/returning-user tracking —
+   see the analytics plan) — checked once on mount, then the timestamp is
+   refreshed for next time. */
+function useSessionReopenedTracking() {
+  useEffect(() => {
+    const lastOpenAt = readJSON<number | null>(STORAGE_KEYS.lastOpenAt, null)
+    if (lastOpenAt != null) {
+      const daysSinceLastOpen = Math.floor((Date.now() - lastOpenAt) / (24 * 60 * 60 * 1000))
+      trackEvent('session_reopened', { daysSinceLastOpen })
+    }
+    writeJSON(STORAGE_KEYS.lastOpenAt, Date.now())
+  }, [])
+}
+
 function App() {
+  useSessionReopenedTracking()
   return (
     <AppProviders>
       <BrowserRouter>

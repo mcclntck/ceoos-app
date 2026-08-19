@@ -75,6 +75,7 @@ export function DepartmentFlowRoute() {
       onBack={() => navigate('/departments')}
       onOpenPlan={(idx) => navigate(`/departments/${dept.id}/flow`, { state: { planIndex: idx } })}
       onOpenConversation={(conversationId) => {
+        trackEvent('chat_started', { deptId: dept.id, resumed: true })
         navigate(`/departments/${dept.id}/flow`, { state: { conversationId } })
       }}
       onAddAction={() => navigate('/actions')}

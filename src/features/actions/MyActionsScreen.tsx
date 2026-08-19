@@ -8,6 +8,7 @@ import { useDepartments } from '@/state/departmentsStore'
 import type { DeptId } from '@/departments/types'
 import { ReminderCard } from './ReminderCard'
 import { AddActionSheet } from './AddActionSheet'
+import { trackEvent } from '@/lib/analytics'
 
 const A_FONT = 'var(--font-primary)'
 const A_TITLE = {
@@ -169,6 +170,7 @@ export function MyActionsScreen({ onOpenReminder }: MyActionsScreenProps) {
         defaultDeptId={filter === 'all' ? null : filter}
         onClose={() => setAddOpen(false)}
         onAdd={(p) => {
+          trackEvent('action_created', { deptId: p.deptId, source: 'my_actions' })
           addPlan(p)
           setFilter(p.deptId)
         }}

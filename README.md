@@ -45,6 +45,9 @@ to Login, to make repeat testing easy.
 - [Netlify Functions](https://docs.netlify.com/functions/overview/) for the
   one server-side call (the coach acknowledgement), backed by the
   [Claude API](https://docs.claude.com)
+- [Google Analytics 4](https://analytics.google.com) for pageviews and a
+  couple of custom funnel events — no session recording or heatmaps, by
+  design (see `src/lib/analytics.ts`)
 
 ## Running locally
 
